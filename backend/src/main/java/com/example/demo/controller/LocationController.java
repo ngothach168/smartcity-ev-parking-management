@@ -1,43 +1,45 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.EvChargerResponse;
-import com.example.demo.dto.ParkingSpotResponse;
-import com.example.demo.repository.LocationDistanceProjection;
-import com.example.demo.service.EvChargerService;
+import com.example.demo.dto.LocationRequest;
+import com.example.demo.dto.LocationResponse;
 import com.example.demo.service.LocationService;
-import com.example.demo.service.ParkingSpotService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/locations")
 @RequiredArgsConstructor
 public class LocationController {
 
-    private final ParkingSpotService parkingSpotService;
-    private final EvChargerService evChargerService;
     private final LocationService locationService;
 
-    @GetMapping("/{locationId}/parking-spots")
-    public ResponseEntity<List<ParkingSpotResponse>> getAvailableSpots(@PathVariable Long locationId) {
-        return ResponseEntity.ok(parkingSpotService.getAvailableSpots(locationId));
+    @GetMapping("/api/locations")
+    public ResponseEntity<List<LocationResponse>> getAllLocations() {
+        return ResponseEntity.ok(locationService.getAllLocations());
     }
 
-    @GetMapping("/{locationId}/ev-chargers")
-    public ResponseEntity<List<EvChargerResponse>> getAvailableChargers(@PathVariable Long locationId) {
-        return ResponseEntity.ok(evChargerService.getAvailableChargers(locationId));
+    @GetMapping("/api/locations/{id}")
+    public ResponseEntity<LocationResponse> getLocationById(@PathVariable Long id) {
+        return ResponseEntity.ok(locationService.getLocationById(id));
     }
 
-    @GetMapping("/nearby")
-    public ResponseEntity<List<LocationDistanceProjection>> getNearbyLocations(
-            @RequestParam double lat,
-            @RequestParam double lng,
-            @RequestParam(defaultValue = "5.0") double radius,
-            @RequestParam(defaultValue = "PARKING") String type) { // Truyền PARKING hoặc CHARGING
+    @PostMapping("/api/admin/locations")
+    public ResponseEntity<LocationResponse> createLocation(
+            @RequestHeader("X-Admin-Id") Long adminId,
+            @Valid @RequestBody LocationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(locationService.createLocation(adminId, request));
+    }
 
-        return ResponseEntity.ok(locationService.getNearbyAvailableLocations(lat, lng, radius, type));
+    @PutMapping("/api/admin/locations/{id}")
+    public ResponseEntity<LocationResponse> updateLocation(
+            @RequestHeader("X-Admin-Id") Long adminId,
+            @PathVariable Long id,
+            @Valid @RequestBody LocationRequest request) {
+        return ResponseEntity.ok(locationService.updateLocation(adminId, id, request));
     }
 }
