@@ -1,7 +1,8 @@
 -- Tên file: 03_triggers_views.sql
--- Mô tả: Khởi tạo 9 Triggers, 1 Event Scheduler và 1 View thống kê doanh thu
+-- Mô tả: Khởi tạo 10 Triggers, 1 Event Scheduler và 1 View thống kê doanh thu
 
 USE ev_parking_db;
+SET time_zone = '+07:00';
 
 DROP TRIGGER IF EXISTS trg_sessions_before_insert;
 DROP TRIGGER IF EXISTS trg_sessions_before_update;
@@ -9,6 +10,7 @@ DROP TRIGGER IF EXISTS trg_sessions_after_insert;
 DROP TRIGGER IF EXISTS trg_sessions_after_update;
 DROP TRIGGER IF EXISTS trg_sessions_block_delete;
 DROP TRIGGER IF EXISTS trg_tariffs_before_update;
+DROP TRIGGER IF EXISTS trg_tariffs_block_delete;
 DROP TRIGGER IF EXISTS trg_audit_logs_before_insert;
 DROP TRIGGER IF EXISTS trg_audit_logs_before_update;
 DROP TRIGGER IF EXISTS trg_audit_logs_before_delete;
@@ -102,7 +104,7 @@ BEGIN
     END IF;
 END $$
 
--- 5. Trigger BEFORE DELETE trên SESSIONS (RB17: Ngăn chặn việc delete trên bảng sessions)
+-- 5. Trigger BEFORE DELETE trên SESSIONS (RB17: Ngăn chặn xóa dữ liệu trên bảng SESSIONS)
 CREATE TRIGGER trg_sessions_block_delete
 BEFORE DELETE ON SESSIONS
 FOR EACH ROW
@@ -128,7 +130,16 @@ BEGIN
     END IF;
 END $$
 
--- 7. Trigger BEFORE INSERT trên ADMIN_AUDIT_LOGS (RB16: Ràng buộc đúng quyền tài khoản ADMIN)
+-- 7. Trigger BEFORE DELETE trên TARIFFS (RB18: Ngăn chặn xóa dữ liệu trên bảng TARIFFS)
+CREATE TRIGGER trg_tariffs_block_delete
+BEFORE DELETE ON TARIFFS
+FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'ERR_RB18: Khong duoc phep xoa du lieu tren bang TARIFFS.';
+END $$
+
+-- 8. Trigger BEFORE INSERT trên ADMIN_AUDIT_LOGS (RB16: Ràng buộc đúng quyền tài khoản ADMIN)
 CREATE TRIGGER trg_audit_logs_before_insert
 BEFORE INSERT ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -143,7 +154,7 @@ BEGIN
     END IF;
 END $$
 
--- 8. Trigger BEFORE UPDATE trên ADMIN_AUDIT_LOGS (RB16: Tính bất biến - Cấm chỉnh sửa log)
+-- 9. Trigger BEFORE UPDATE trên ADMIN_AUDIT_LOGS (RB16: Tính bất biến - Cấm chỉnh sửa log)
 CREATE TRIGGER trg_audit_logs_before_update
 BEFORE UPDATE ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -151,7 +162,7 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB16: Tinh bat bien - Nghiem cam chinh sua lich su thao tac quan tri.';
 END $$
 
--- 9. Trigger BEFORE DELETE trên ADMIN_AUDIT_LOGS (RB16: Ngăn chặn việc delete trên bảng admin_audit_logs)
+-- 10. Trigger BEFORE DELETE trên ADMIN_AUDIT_LOGS (RB16: Ngăn chặn xóa dữ liệu trên bảng ADMIN_AUDIT_LOGS)
 CREATE TRIGGER trg_audit_logs_before_delete
 BEFORE DELETE ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -160,7 +171,7 @@ BEGIN
     SET MESSAGE_TEXT = 'ERR_RB16: Khong duoc phep xoa du lieu tren bang ADMIN_AUDIT_LOGS';
 END $$
 
--- 10. Event Scheduler (Tự động quét và hủy đơn Quá hạn 15 phút)
+-- 11. Event Scheduler (Tự động quét và hủy đơn Quá hạn 15 phút)
 CREATE EVENT evt_expire_booked_sessions
 ON SCHEDULE EVERY 1 MINUTE
 DO
@@ -174,7 +185,7 @@ END $$
 
 DELIMITER ;
 
--- 11. View thống kê doanh thu (Nghiệp vụ xuất báo cáo cho Admin)
+-- 12. View thống kê doanh thu (Nghiệp vụ xuất báo cáo cho Admin)
 CREATE OR REPLACE VIEW vw_location_revenue AS
 SELECT 
     l.id AS location_id,
