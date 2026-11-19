@@ -8,7 +8,7 @@ USE ev_parking_db;
 -- 1. BẢNG USERS: 1000 bản ghi (ID 1-10: ADMIN, ID 11-1000: CUSTOMER)
 -- =====================================================================
 INSERT INTO USERS (id, full_name, phone_number, password, role) VALUES
-(1, 'Phạm Văn Phúc', '0910000001', '$2a$10$eAccYoNOHEqXve8aIWT8Nu3PkMXW.0001HashMockValue', 'ADMIN'),
+(1, 'Admin SmartHub', '0900000001', '$2a$10$mmTAXrTYsXqDVukCANiXvOMpMXuJYYcr.5v6S7fKfHC9j6y9zPPiK', 'ADMIN'),
 (2, 'Vũ Hoàng Huy', '0930000002', '$2a$10$eAccYoNOHEqXve8aIWT8Nu3PkMXW.0002HashMockValue', 'ADMIN'),
 (3, 'Phạm Gia Hương', '0940000003', '$2a$10$eAccYoNOHEqXve8aIWT8Nu3PkMXW.0003HashMockValue', 'ADMIN'),
 (4, 'Lê Hữu Tuấn', '0960000004', '$2a$10$eAccYoNOHEqXve8aIWT8Nu3PkMXW.0004HashMockValue', 'ADMIN'),

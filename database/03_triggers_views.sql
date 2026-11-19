@@ -1,5 +1,5 @@
 -- Tên file: 03_triggers_views.sql
--- Mô tả: Khởi tạo 10 Triggers, 1 Event Scheduler và 1 View thống kê doanh thu
+-- Mô tả: Khởi tạo 11 Triggers, 1 Event Scheduler và 1 View thống kê doanh thu
 
 USE ev_parking_db;
 SET time_zone = '+07:00';
@@ -9,6 +9,7 @@ DROP TRIGGER IF EXISTS trg_sessions_before_update;
 DROP TRIGGER IF EXISTS trg_sessions_after_insert;
 DROP TRIGGER IF EXISTS trg_sessions_after_update;
 DROP TRIGGER IF EXISTS trg_sessions_block_delete;
+DROP TRIGGER IF EXISTS trg_tariffs_before_insert;
 DROP TRIGGER IF EXISTS trg_tariffs_before_update;
 DROP TRIGGER IF EXISTS trg_tariffs_block_delete;
 DROP TRIGGER IF EXISTS trg_audit_logs_before_insert;
@@ -113,14 +114,33 @@ BEGIN
     SET MESSAGE_TEXT = 'Khong duoc phep xoa du lieu tren bang SESSIONS';
 END $$
 
--- 6. Trigger BEFORE UPDATE trên TARIFFS (RB15: Khóa bảo vệ cập nhật bảng giá)
+-- 6. Trigger BEFORE INSERT trên TARIFFS (RB06: Chống chồng lấn khung giờ cùng loại dịch vụ)
+CREATE TRIGGER trg_tariffs_before_insert
+BEFORE INSERT ON TARIFFS
+FOR EACH ROW
+BEGIN
+    DECLARE v_overlap_count INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO v_overlap_count
+    FROM TARIFFS
+    WHERE service_type = NEW.service_type
+      AND NEW.start_time < end_time
+      AND NEW.end_time > start_time;
+
+    IF v_overlap_count > 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB06: Khung gio bieu gia bi chong lan voi khung gio da ton tai.';
+    END IF;
+END $$
+
+-- 7. Trigger BEFORE UPDATE trên TARIFFS (RB06 & RB15: Chống chồng lấn khung giờ và Khóa bảo vệ cập nhật bảng giá)
 CREATE TRIGGER trg_tariffs_before_update
 BEFORE UPDATE ON TARIFFS
 FOR EACH ROW
 BEGIN
     DECLARE v_active_count INT DEFAULT 0;
+    DECLARE v_overlap_count INT DEFAULT 0;
 
-    -- Đếm xem có bất kỳ phiên giao dịch nào đang hoạt động trên toàn hệ thống hay không
+    -- RB15: Đếm xem có bất kỳ phiên giao dịch nào đang hoạt động trên toàn hệ thống hay không
     SELECT COUNT(*) INTO v_active_count
     FROM SESSIONS
     WHERE status IN ('BOOKED', 'IN_PROGRESS');
@@ -128,9 +148,25 @@ BEGIN
     IF v_active_count > 0 THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB15: Khong the cap nhat bang gia khi dang co phien giao dich hoat dong.';
     END IF;
+
+    -- RB06: Chỉ kiểm tra chồng lấn nếu có thay đổi loại dịch vụ hoặc khung giờ
+    IF NOT (OLD.service_type <=> NEW.service_type
+            AND OLD.start_time <=> NEW.start_time
+            AND OLD.end_time <=> NEW.end_time) THEN
+        SELECT COUNT(*) INTO v_overlap_count
+        FROM TARIFFS
+        WHERE service_type = NEW.service_type
+          AND id != OLD.id
+          AND NEW.start_time < end_time
+          AND NEW.end_time > start_time;
+
+        IF v_overlap_count > 0 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB06: Khung gio cap nhat bi chong lan voi khung gio khac.';
+        END IF;
+    END IF;
 END $$
 
--- 7. Trigger BEFORE DELETE trên TARIFFS (RB18: Ngăn chặn xóa dữ liệu trên bảng TARIFFS)
+-- 8. Trigger BEFORE DELETE trên TARIFFS (RB18: Ngăn chặn xóa dữ liệu trên bảng TARIFFS)
 CREATE TRIGGER trg_tariffs_block_delete
 BEFORE DELETE ON TARIFFS
 FOR EACH ROW
@@ -139,7 +175,7 @@ BEGIN
     SET MESSAGE_TEXT = 'ERR_RB18: Khong duoc phep xoa du lieu tren bang TARIFFS.';
 END $$
 
--- 8. Trigger BEFORE INSERT trên ADMIN_AUDIT_LOGS (RB16: Ràng buộc đúng quyền tài khoản ADMIN)
+-- 9. Trigger BEFORE INSERT trên ADMIN_AUDIT_LOGS (RB16: Ràng buộc đúng quyền tài khoản ADMIN)
 CREATE TRIGGER trg_audit_logs_before_insert
 BEFORE INSERT ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -154,7 +190,7 @@ BEGIN
     END IF;
 END $$
 
--- 9. Trigger BEFORE UPDATE trên ADMIN_AUDIT_LOGS (RB16: Tính bất biến - Cấm chỉnh sửa log)
+-- 10. Trigger BEFORE UPDATE trên ADMIN_AUDIT_LOGS (RB16: Tính bất biến - Cấm chỉnh sửa log)
 CREATE TRIGGER trg_audit_logs_before_update
 BEFORE UPDATE ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -162,7 +198,7 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB16: Tinh bat bien - Nghiem cam chinh sua lich su thao tac quan tri.';
 END $$
 
--- 10. Trigger BEFORE DELETE trên ADMIN_AUDIT_LOGS (RB16: Ngăn chặn xóa dữ liệu trên bảng ADMIN_AUDIT_LOGS)
+-- 11. Trigger BEFORE DELETE trên ADMIN_AUDIT_LOGS (RB16: Ngăn chặn xóa dữ liệu trên bảng ADMIN_AUDIT_LOGS)
 CREATE TRIGGER trg_audit_logs_before_delete
 BEFORE DELETE ON ADMIN_AUDIT_LOGS
 FOR EACH ROW
@@ -171,7 +207,7 @@ BEGIN
     SET MESSAGE_TEXT = 'ERR_RB16: Khong duoc phep xoa du lieu tren bang ADMIN_AUDIT_LOGS';
 END $$
 
--- 11. Event Scheduler (Tự động quét và hủy đơn Quá hạn 15 phút)
+-- 12. Event Scheduler (Tự động quét và hủy đơn Quá hạn 15 phút)
 CREATE EVENT evt_expire_booked_sessions
 ON SCHEDULE EVERY 1 MINUTE
 DO
@@ -185,7 +221,7 @@ END $$
 
 DELIMITER ;
 
--- 12. View thống kê doanh thu (Nghiệp vụ xuất báo cáo cho Admin)
+-- 13. View thống kê doanh thu (Nghiệp vụ xuất báo cáo cho Admin)
 CREATE OR REPLACE VIEW vw_location_revenue AS
 SELECT 
     l.id AS location_id,
