@@ -5,28 +5,31 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
-@Table(name = "locations")
+@Table(name = "LOCATIONS")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Location {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 225)
+    @Column(name = "name", nullable = false, length = 225)
     private String name;
 
     @Column(name = "location_code", nullable = false, unique = true, length = 50)
     private String locationCode;
 
-    @Column(nullable = false, precision = 10, scale = 8)
-    private java.math.BigDecimal latitude;
+    @Column(name = "latitude", nullable = false, precision = 10, scale = 8)
+    private BigDecimal latitude;
 
-    @Column(nullable = false, precision = 11, scale = 8)
-    private java.math.BigDecimal longitude;
+    @Column(name = "longitude", nullable = false, precision = 11, scale = 8)
+    private BigDecimal longitude;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(name = "address", nullable = false, columnDefinition = "TEXT")
     private String address;
 }

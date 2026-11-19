@@ -4,41 +4,46 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sessions")
+@Table(name = "SESSIONS")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Session {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private User user;
 
-    @Column(name = "service_type", nullable = false, length = 20)
+    @Column(name = "service_type", nullable = false, length = 20, updatable = false)
     private String serviceType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ev_charger_id")
+    @JoinColumn(name = "ev_charger_id", updatable = false)
     private EvCharger evCharger;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parking_spot_id")
+    @JoinColumn(name = "parking_spot_id", updatable = false)
     private ParkingSpot parkingSpot;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private String status = "BOOKED";
 
-    @Column(name = "reserved_at", nullable = false)
-    private LocalDateTime reservedAt = LocalDateTime.now();
+    @Generated(event = EventType.INSERT)
+    @Column(name = "reserved_at", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime reservedAt;
 
+    @Generated(event = EventType.INSERT)
     @Column(name = "expires_at", insertable = false, updatable = false)
     private LocalDateTime expiresAt;
 

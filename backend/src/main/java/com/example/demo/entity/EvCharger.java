@@ -6,16 +6,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "ev_chargers")
+@Table(name = "EV_CHARGERS")
 @Getter
 @Setter
 @NoArgsConstructor
 public class EvCharger {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "location_id", nullable = false)
     private Location location;
 
@@ -25,6 +26,6 @@ public class EvCharger {
     @Column(name = "port_type", nullable = false, length = 20)
     private String portType;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private String status = "AVAILABLE";
 }
