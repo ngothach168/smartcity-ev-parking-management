@@ -124,6 +124,7 @@ BEGIN
     SELECT COUNT(*) INTO v_overlap_count
     FROM TARIFFS
     WHERE service_type = NEW.service_type
+      AND is_active = 1
       AND NEW.start_time < end_time
       AND NEW.end_time > start_time;
 
@@ -156,6 +157,7 @@ BEGIN
         SELECT COUNT(*) INTO v_overlap_count
         FROM TARIFFS
         WHERE service_type = NEW.service_type
+          AND is_active = 1
           AND id != OLD.id
           AND NEW.start_time < end_time
           AND NEW.end_time > start_time;

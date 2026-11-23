@@ -84,13 +84,13 @@ CREATE TABLE TARIFFS (
     end_time TIME NOT NULL,
     base_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     multiplier DECIMAL(3,2) NOT NULL DEFAULT 1.00,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
 
     -- RB04: Phân loại dịch vụ áp dụng biểu giá
     CONSTRAINT chk_tariff_service CHECK (service_type IN ('PARKING', 'CHARGING')),
 
     -- RB06: Chu kỳ bảng giá (Cấm lặp lại loại dịch vụ trên cùng một khung giờ)
     CONSTRAINT chk_tariff_time CHECK (end_time > start_time),
-    CONSTRAINT uq_tariff_slot UNIQUE (service_type, start_time, end_time),
 
     -- RB12: Giới hạn giá trị đơn giá và hệ số nhân không âm
     CONSTRAINT chk_tariff_price CHECK (base_price >= 0.00 AND multiplier >= 0.00)

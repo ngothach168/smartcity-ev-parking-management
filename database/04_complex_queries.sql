@@ -93,12 +93,60 @@ WHERE ec.location_id = @location_id
 ORDER BY `Loại dịch vụ`, `Phân loại`, `Mã thiết bị`;
 
 
+-- Thống kê doanh thu theo ngày, khu vực và LOẠI DỊCH VỤ trong khoảng thời gian từ 01/10/2026 đến 13/10/2026.
+-- Đầu vào: Từ ngày (@start_date), đến ngày (@end_date) và loại dịch vụ (@service_type, không bắt buộc).
+-- Mục đích: Thống kê số phiên đã ghi nhận tiền (hoàn tất, quá hạn, hủy muộn) và tổng doanh thu theo từng ngày, từng khu vực kèm dòng tổng cộng ở cuối; xem cả 2 loại dịch vụ cùng lúc hoặc xem riêng từng loại.
+
+SET @start_date   = '2026-10-01';
+SET @end_date     = '2026-10-13';
+SET @service_type = NULL;      -- chỉ xem đỗ xe: SET @service_type = 'PARKING';  chỉ xem sạc điện: SET @service_type = 'CHARGING';
+
+SELECT `Ngày`, `Khu vực`, `Dịch vụ`, `Số phiên`, `Doanh thu`
+FROM (
+    -- Phần 1: Lấy dữ liệu chi tiết bình thường
+    SELECT
+        DATE(COALESCE(s.end_time, s.reserved_at)) AS `Ngày`,
+        l.name AS `Khu vực`,
+        s.service_type AS `Dịch vụ`,
+        COUNT(s.id) AS `Số phiên`,
+        SUM(s.total_amount) AS `Doanh thu`,
+        0 AS sort_order  -- Dùng để đẩy dòng tổng xuống dưới
+    FROM SESSIONS s
+    LEFT JOIN PARKING_SPOTS ps ON s.parking_spot_id = ps.id
+    LEFT JOIN EV_CHARGERS ec   ON s.ev_charger_id = ec.id
+    JOIN LOCATIONS l           ON l.id = COALESCE(ps.location_id, ec.location_id)
+    WHERE s.total_amount > 0
+      AND DATE(COALESCE(s.end_time, s.reserved_at)) BETWEEN @start_date AND @end_date
+      AND (@service_type IS NULL OR s.service_type = @service_type)
+    GROUP BY DATE(COALESCE(s.end_time, s.reserved_at)), l.id, l.location_code, l.name, s.service_type
+
+    UNION ALL
+
+    -- Phần 2: Tính dòng TỔNG CỘNG
+    SELECT
+        'TỔNG CỘNG' AS `Ngày`,
+        '' AS `Khu vực`,
+        '' AS `Dịch vụ`,
+        COUNT(s.id) AS `Số phiên`,
+        SUM(s.total_amount) AS `Doanh thu`,
+        1 AS sort_order
+    FROM SESSIONS s
+    LEFT JOIN PARKING_SPOTS ps ON s.parking_spot_id = ps.id
+    LEFT JOIN EV_CHARGERS ec   ON s.ev_charger_id = ec.id
+    JOIN LOCATIONS l           ON l.id = COALESCE(ps.location_id, ec.location_id)
+    WHERE s.total_amount > 0
+      AND DATE(COALESCE(s.end_time, s.reserved_at)) BETWEEN @start_date AND @end_date
+      AND (@service_type IS NULL OR s.service_type = @service_type)
+) AS result
+ORDER BY sort_order ASC, `Ngày` DESC, `Khu vực` ASC, `Dịch vụ` ASC;
+
 -- Thống kê doanh thu theo từng khu vực trong khoảng thời gian từ 01/10/2026 đến 13/10/2026.
--- Đầu vào: Khoảng thời gian đối soát từ ngày (@start_date) đến ngày (@end_date).
+-- Đầu vào: Từ ngày (@start_date), đến ngày (@end_date) và khu vực cần xem (@location_id, không bắt buộc).
 -- Mục đích: Thống kê toàn diện số lượng đơn (hoàn tất, quá hạn 15 phút, hủy muộn mất cọc, hủy sớm miễn phí) và phân tách rõ doanh thu dịch vụ thực tế với doanh thu từ phí phạt giữ chỗ trên từng khu vực kèm dòng tổng cộng toàn hệ thống.
 
-SET @start_date = '2026-10-01 00:00:00';
-SET @end_date   = '2026-10-13 23:59:59';
+SET @start_date  = '2026-10-01 00:00:00';
+SET @end_date    = '2026-10-13 23:59:59';
+SET @location_id = NULL;      -- xem riêng 1 trạm: SET @location_id = 1;
 
 WITH SessionLocations AS (
     SELECT
@@ -112,24 +160,27 @@ WITH SessionLocations AS (
       AND s.status IN ('COMPLETED', 'EXPIRED', 'CANCELLED')
 )
 SELECT
-    IF(GROUPING(l.id), 'TỔNG', MAX(l.location_code)) AS `Mã trạm`,
-    IF(GROUPING(l.id), 'Toàn hệ thống', MAX(l.name)) AS `Tên trạm`,
+    IF(GROUPING(l.id) = 1, 'TỔNG', MAX(l.location_code)) AS `Mã trạm`,
+    IF(GROUPING(l.id) = 1, NULL, MAX(l.name)) AS `Tên trạm`,
     COUNT(CASE WHEN sl.status = 'COMPLETED' THEN 1 END) AS `Đơn hoàn tất`,
     COUNT(CASE WHEN sl.status = 'EXPIRED'   THEN 1 END) AS `Đơn quá hạn`,
     COUNT(CASE WHEN sl.status = 'CANCELLED' AND sl.total_amount > 0 THEN 1 END) AS `Đơn hủy mất cọc`,
     COUNT(CASE WHEN sl.status = 'CANCELLED' AND sl.total_amount = 0 THEN 1 END) AS `Đơn hủy miễn phí`,
-    SUM(CASE WHEN sl.status = 'COMPLETED' THEN sl.total_amount ELSE 0 END) AS `Doanh thu dịch vụ`,
-    SUM(CASE WHEN sl.status IN ('EXPIRED', 'CANCELLED') THEN sl.total_amount ELSE 0 END) AS `Doanh thu phí phạt`,
+    COALESCE(SUM(CASE WHEN sl.status = 'COMPLETED' THEN sl.total_amount ELSE 0 END), 0) AS `Doanh thu dịch vụ`,
+    COALESCE(SUM(CASE WHEN sl.status IN ('EXPIRED', 'CANCELLED') THEN sl.total_amount ELSE 0 END), 0) AS `Doanh thu phí phạt`,
     COALESCE(SUM(sl.total_amount), 0) AS `Tổng doanh thu`
 FROM LOCATIONS l
 LEFT JOIN SessionLocations sl ON l.id = sl.location_id
+WHERE (@location_id IS NULL OR l.id = @location_id)
 GROUP BY l.id WITH ROLLUP
 ORDER BY GROUPING(l.id) ASC, `Tổng doanh thu` DESC, `Mã trạm` ASC;
 
 
 -- Thống kê số lượng ô đỗ và trụ sạc theo trạng thái tại từng khu vực
--- Đầu vào: Không có.
+-- Đầu vào: Loại thiết bị (@device_type, không bắt buộc).
 -- Mục đích: Thống kê số lượng thiết bị đang trống, đang sử dụng và đang bảo trì tại từng trạm.
+
+SET @device_type = NULL;      -- chỉ xem ô đỗ: SET @device_type = 'PARKING';  chỉ xem trụ sạc: SET @device_type = 'CHARGING';
 
 WITH ChargerStats AS (
     SELECT
@@ -162,9 +213,10 @@ SELECT
     COALESCE(p.in_use_spots, 0) AS `Ô đỗ đang dùng`,
     COALESCE(p.maintenance_spots, 0) AS `Ô đỗ bảo trì`
 FROM LOCATIONS l
-LEFT JOIN ChargerStats c ON l.id = c.location_id
-LEFT JOIN ParkingStats p ON l.id = p.location_id
+LEFT JOIN ChargerStats c ON l.id = c.location_id AND (@device_type IS NULL OR @device_type = 'CHARGING')
+LEFT JOIN ParkingStats p ON l.id = p.location_id AND (@device_type IS NULL OR @device_type = 'PARKING')
 ORDER BY (`Trụ sạc bảo trì` + `Ô đỗ bảo trì`) DESC, `Mã trạm` ASC;
+
 
 -- Xem lịch sử chỉnh sửa bảng giá (Kiểm toán tài chính)
 -- Đầu vào: Không có.
