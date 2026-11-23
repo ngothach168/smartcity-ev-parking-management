@@ -1,23 +1,43 @@
-🚗⚡ EV Charging & Parking Management System
+# Hệ Thống Quản Lý Bãi Đỗ Xe & Trạm Sạc Điện Thông Minh
 
-Đồ án môn Cơ sở dữ liệu — Hệ thống quản lý đặt chỗ tập trung cho trạm sạc xe điện và bãi đỗ xe đô thị, tích hợp định giá linh hoạt theo khung giờ cao điểm.
+Ứng dụng Backend sử dụng Java Spring Boot (JDK 21) và cơ sở dữ liệu MySQL 8.0.
 
-📋 Tổng quan
-Hệ thống backend quản lý vòng đời đặt chỗ (booking) cho hai loại tài nguyên đô thị:
-- Trạm sạc xe điện — vận hành tự phục vụ 100%, không có nhân viên giám sát.
-- Bãi đỗ xe — vận hành tự động qua hệ thống quét mã QR, không có bảo vệ gác cổng.
+## 🛠 Yêu cầu cài đặt
+*   **JDK 21**
+*   **MySQL Server 8.0** (kèm MySQL Workbench)
+*   **IntelliJ IDEA**
+*   **Git**
 
-Trọng tâm đồ án là thiết kế Cơ sở dữ liệu quan hệ, xử lý dữ liệu thời gian (temporal data), tính phí theo thời lượng sử dụng thực tế, và biểu giá linh động theo khung giờ.
+## 🚀 Hướng dẫn cài đặt & Chạy
 
-🎯 Mục tiêu kỹ thuật
-Quản lý vòng đời đặt chỗ thống nhất cho cả 2 loại dịch vụ (Booking → Check-in → Check-out → Hóa đơn).
-Tính phí tự động theo thuật toán cắt lớp thời gian (Time-Slicing) và phân bổ điện năng theo tỷ lệ (Proportional kWh Allocation).
-Đảm bảo toàn vẹn dữ liệu trong môi trường nhiều người dùng truy cập đồng thời (Concurrency Control).
-Tìm kiếm trạm sạc/bãi đỗ gần nhất theo tọa độ (Haversine + Bounding Box pre-filter).
+### Bước 1: Tải code về máy
+Mở Terminal/CMD và chạy:
+```bash
+git clone https://github.com/ngothach168/smartcity-ev-parking-management.git
+Bước 2: Khởi tạo Database
+Mở MySQL Workbench và chạy lần lượt 3 file SQL trong thư mục database/ theo đúng thứ tự:
 
-🏗️ Kiến trúc & Công nghệ
-Thành phần	Công nghệ
-Backend	Java Spring Boot
-Cơ sở dữ liệu	MySQL 8.0+
-ORM	Spring Data JPA
-API Testing	Postman (giả lập phần cứng/IoT)
+01_schema_ddl.sql
+
+02_mock_data.sql
+
+03_triggers_views.sql
+
+Bước 3: Cấu hình Database
+Truy cập vào thư mục: backend/src/main/resources/
+
+Tìm file application.properties.example, copy và đổi tên thành application.properties.
+
+Mở file application.properties lên và cập nhật lại tài khoản, mật khẩu MySQL (username, password).
+
+Bước 4: Chạy ứng dụng
+Mở thư mục backend bằng IntelliJ IDEA, tìm file DemoApplication.java (src/main/java/com/example/demo/) và bấm Run.
+
+🌐 Truy cập
+Mở trình duyệt: http://localhost:8080
+
+Tài khoản Admin mặc định:
+
+Số điện thoại: 0900000001
+
+Mật khẩu: 123456
