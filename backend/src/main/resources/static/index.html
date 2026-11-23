@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartHub EV & Parking — Đăng nhập</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+
+<div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+    <!-- Header -->
+    <div class="bg-slate-900 text-white px-6 py-6 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 font-bold text-xl mb-2">
+            ⚡
+        </div>
+        <h1 class="text-xl font-bold tracking-tight">SmartHub EV & Parking</h1>
+        <p class="text-xs text-slate-400 mt-1">Hệ thống Quản lý Bãi đỗ xe & Trạm sạc Điện</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="grid grid-cols-2 border-b border-slate-200 text-sm font-semibold">
+        <button id="tabLogin" onclick="switchTab('login')"
+                class="py-3.5 text-emerald-600 border-b-2 border-emerald-600 bg-white">
+            Đăng nhập
+        </button>
+        <button id="tabRegister" onclick="switchTab('register')"
+                class="py-3.5 text-slate-500 border-b-2 border-transparent hover:text-slate-700 bg-slate-50">
+            Đăng ký khách
+        </button>
+    </div>
+
+    <!-- Form Đăng nhập -->
+    <form id="loginForm" class="p-6 space-y-4">
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại (10 chữ số)</label>
+            <input id="loginPhone" type="text" required pattern="[0-9]{10}" maxlength="10"
+                   placeholder="0900000001"
+                   class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu</label>
+            <input id="loginPassword" type="password" required placeholder="••••••"
+                   class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <button id="btnLoginSubmit" type="submit"
+                class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm transition">
+            Đăng nhập hệ thống
+        </button>
+    </form>
+
+    <!-- Form Đăng ký -->
+    <form id="registerForm" class="p-6 space-y-4 hidden">
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Họ và tên</label>
+            <input id="regName" type="text" required maxlength="100" placeholder="Nguyễn Văn A"
+                   class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Số điện thoại (đúng 10 số)</label>
+            <input id="regPhone" type="text" required pattern="[0-9]{10}" maxlength="10"
+                   placeholder="0912345678"
+                   class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu</label>
+            <input id="regPassword" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
+                   class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <button id="btnRegisterSubmit" type="submit"
+                class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-sm transition">
+            Tạo tài khoản Khách hàng
+        </button>
+    </form>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    function switchTab(tab) {
+        const isLogin = tab === 'login';
+        document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+        document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+
+        document.getElementById('tabLogin').className = isLogin
+            ? 'py-3.5 text-emerald-600 border-b-2 border-emerald-600 bg-white'
+            : 'py-3.5 text-slate-500 border-b-2 border-transparent hover:text-slate-700 bg-slate-50';
+
+        document.getElementById('tabRegister').className = !isLogin
+            ? 'py-3.5 text-emerald-600 border-b-2 border-emerald-600 bg-white'
+            : 'py-3.5 text-slate-500 border-b-2 border-transparent hover:text-slate-700 bg-slate-50';
+    }
+
+    function quickFill(phone, pass) {
+        document.getElementById('loginPhone').value = phone;
+        document.getElementById('loginPassword').value = pass;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnLoginSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Đang xác thực...';
+
+        try {
+            const payload = {
+                phoneNumber: document.getElementById('loginPhone').value.trim(),
+                password: document.getElementById('loginPassword').value
+            };
+            const res = await apiFetch('/api/auth/login', { method: 'POST', body: payload });
+            const user = saveCurrentUser(res);
+            showToast(`Xin chào ${user.fullName || user.phoneNumber}!`, 'success');
+
+            setTimeout(() => {
+                window.location.href = user.role === 'ADMIN' ? '/admin.html' : '/customer.html';
+            }, 400);
+        } catch {
+            // Toast lỗi đã tự bung trong apiFetch
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Đăng nhập hệ thống';
+        }
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnRegisterSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Đang tạo tài khoản...';
+
+        try {
+            const phone = document.getElementById('regPhone').value.trim();
+            const pass = document.getElementById('regPassword').value;
+            await apiFetch('/api/auth/register', {
+                method: 'POST',
+                body: {
+                    fullName: document.getElementById('regName').value.trim(),
+                    phoneNumber: phone,
+                    password: pass
+                }
+            });
+
+            showToast('Đăng ký thành công! Vui lòng đăng nhập.', 'success');
+            document.getElementById('registerForm').reset();
+            switchTab('login');
+            quickFill(phone, pass);
+        } catch {
+            // Toast lỗi đã tự bung trong apiFetch
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Tạo tài khoản Khách hàng';
+        }
+    });
+</script>
+</body>
+</html>

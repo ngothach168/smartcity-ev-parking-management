@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartHub EV & Parking — Cổng Khách hàng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+
+<!-- Navbar -->
+<header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">⚡</span>
+            <div>
+                <div class="font-bold text-sm sm:text-base leading-tight">SmartHub EV & Parking</div>
+                <div class="text-[11px] text-slate-400">Cổng Đặt chỗ & Dịch vụ</div>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-1 bg-slate-800 p-1 rounded-lg text-xs font-semibold">
+            <button id="navSearch" onclick="switchView('search')" class="px-3.5 py-2 rounded-md bg-emerald-600 text-white">
+                Tìm trạm & Đặt chỗ
+            </button>
+            <button id="navSessions" onclick="switchView('sessions')" class="px-3.5 py-2 rounded-md text-slate-300 hover:text-white flex items-center gap-1.5">
+                <span>Phiên của tôi</span>
+                <span id="activeSessionBadge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-amber-400 text-slate-950 font-bold">0</span>
+            </button>
+            <button id="navTariffs" onclick="switchView('tariffs')" class="px-3.5 py-2 rounded-md text-slate-300 hover:text-white">
+                Bảng giá
+            </button>
+        </nav>
+
+        <div class="flex items-center gap-2.5 text-xs">
+            <a id="btnBackToAdmin" href="/admin.html"
+               class="hidden px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition whitespace-nowrap">
+                ← Trang Quản trị
+            </a>
+            <div class="text-right hidden sm:block">
+                <div id="headerUserName" class="font-semibold text-white"></div>
+                <div id="headerUserPhone" class="text-slate-400 font-mono text-[11px]"></div>
+            </div>
+            <button onclick="logout()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white font-semibold transition">
+                Đăng xuất
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Tabs -->
+    <div class="md:hidden grid grid-cols-3 border-t border-slate-800 text-xs font-semibold text-center">
+        <button id="mNavSearch" onclick="switchView('search')" class="py-2.5 bg-emerald-600 text-white">Tìm trạm</button>
+        <button id="mNavSessions" onclick="switchView('sessions')" class="py-2.5 text-slate-300">Phiên của tôi</button>
+        <button id="mNavTariffs" onclick="switchView('tariffs')" class="py-2.5 text-slate-300">Bảng giá</button>
+    </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ==================== VIEW 1: TÌM TRẠM (TH1: BÁN KÍNH | TH2: MÃ KHU VỰC) ==================== -->
+    <section id="viewSearch" class="space-y-6">
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900">Tìm trạm & Kiểm tra vị trí khả dụng</h1>
+                    <p class="text-xs text-slate-500 mt-0.5">Hỗ trợ tra cứu quanh vị trí hiện tại hoặc nhập trực tiếp mã khu vực khi bạn đang ở bãi.</p>
+                </div>
+                <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto shrink-0">
+                    <button type="button" id="modeBtnNearby" onclick="switchSearchMode('nearby')"
+                            class="px-3.5 py-2 rounded-lg bg-slate-900 text-white transition">
+                        Tìm quanh tôi
+                    </button>
+                    <button type="button" id="modeBtnCode" onclick="switchSearchMode('code')"
+                            class="px-3.5 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                        Nhập mã khu vực
+                    </button>
+                </div>
+            </div>
+
+            <!-- CHẾ ĐỘ 1: TÌM THEO BÁN KÍNH -->
+            <div id="nearbySearchFlow" class="space-y-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">1</span>
+                        <span class="text-xs font-bold uppercase tracking-wide text-slate-700">Chọn loại hình dịch vụ</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button type="button" id="btnServiceParking" onclick="selectServiceType('PARKING')"
+                                class="text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 transition flex items-center gap-3.5">
+                            <span class="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl shrink-0">🅿️</span>
+                            <div>
+                                <div class="font-bold text-sm text-slate-900">Đỗ xe (Parking)</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Đặt trước ô đỗ cho xe 2 bánh hoặc xe 4 bánh</div>
+                            </div>
+                        </button>
+
+                        <button type="button" id="btnServiceCharging" onclick="selectServiceType('CHARGING')"
+                                class="text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 transition flex items-center gap-3.5">
+                            <span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl shrink-0">⚡</span>
+                            <div>
+                                <div class="font-bold text-sm text-slate-900">Sạc xe điện (EV Charging)</div>
+                                <div class="text-xs text-slate-500 mt-0.5">Đặt trước trụ sạc chuẩn CCS2 hoặc TYPE_2</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="stepSubType" class="hidden">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">2</span>
+                        <span id="subTypeStepTitle" class="text-xs font-bold uppercase tracking-wide text-slate-700">Chọn phân loại</span>
+                    </div>
+                    <div id="subTypeOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                </div>
+
+                <form id="searchForm" class="hidden pt-2 border-t border-slate-100 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">3</span>
+                        <span class="text-xs font-bold uppercase tracking-wide text-slate-700">Vị trí & Bán kính tìm kiếm</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Vĩ độ (Latitude)</label>
+                            <input id="inputLat" type="number" step="any" required value="10.84817666"
+                                   class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kinh độ (Longitude)</label>
+                            <input id="inputLng" type="number" step="any" required value="106.78663251"
+                                   class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Bán kính (km)</label>
+                            <input id="inputRadius" type="number" step="0.5" min="0.5" max="100" required value="5"
+                                   class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                        </div>
+                        <div class="lg:col-span-2">
+                            <button type="button" onclick="useMyLocation()"
+                                    class="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg border border-slate-300 transition">
+                                Lấy vị trí hiện tại của tôi
+                            </button>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <button id="btnSearchSubmit" type="submit"
+                                    class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg transition">
+                                Tìm kiếm
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- CHẾ ĐỘ 2: NHẬP MÃ KHU VỰC (TH2) -->
+            <form id="codeSearchForm" class="hidden space-y-4">
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                    Nhập <strong>mã định danh khu vực</strong> được niêm yết tại cổng bãi đỗ / trạm sạc (ví dụ: <span class="font-mono font-semibold text-slate-800">LOC-01</span>, <span class="font-mono font-semibold text-slate-800">LOC-10</span>) để xem ngay toàn bộ vị trí đang khả dụng tại đó.
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 items-end">
+                    <div class="flex-1 w-full">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Mã khu vực (Location Code)</label>
+                        <input id="inputLocationCode" type="text" required placeholder="Nhập mã khu vực..."
+                               class="w-full px-3.5 py-2.5 text-sm font-mono uppercase border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+                    </div>
+                    <button id="btnCodeSearchSubmit" type="submit"
+                            class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg transition shrink-0">
+                        Kiểm tra khu vực
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Kết quả tìm kiếm -->
+        <div id="searchResultSection" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 id="resultHeading" class="font-bold text-sm text-slate-900">Kết quả tìm kiếm</h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Bấm vào trạm để chuyển sang trang chọn vị trí cụ thể và đặt chỗ.</p>
+                </div>
+                <span id="locationCount" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 self-start sm:self-auto">0 trạm</span>
+            </div>
+            <div id="locationList" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
+        </div>
+    </section>
+
+    <!-- ==================== VIEW 2: PHIÊN CỦA TÔI ==================== -->
+    <section id="viewSessions" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Phiên giao dịch của tôi</h2>
+                <p class="text-xs text-slate-500">Giữ chỗ tối đa 15 phút (hủy miễn phí trong 5 phút đầu, sau 5 phút tính phí cọc).</p>
+            </div>
+            <button onclick="loadMySessions()" class="px-3.5 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                Làm mới
+            </button>
+        </div>
+
+        <div id="sessionList" class="space-y-3">
+            <div class="bg-white rounded-xl p-8 text-center text-sm text-slate-400 border border-slate-200">
+                Đang tải dữ liệu...
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== VIEW 3: BẢNG GIÁ ==================== -->
+    <section id="viewTariffs" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Bảng giá dịch vụ hiện hành</h2>
+                <p class="text-xs text-slate-500">Đơn giá thực tế = Giá cơ bản × Hệ số khung giờ (tự động chia nhỏ nếu sử dụng vắt qua nhiều khung giờ).</p>
+            </div>
+            <button onclick="loadTariffs()" class="px-3.5 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-lg hover:bg-slate-50">
+                Tải lại
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr>
+                    <th class="px-4 py-3">Dịch vụ</th>
+                    <th class="px-4 py-3">Khung giờ</th>
+                    <th class="px-4 py-3 text-right">Giá cơ bản</th>
+                    <th class="px-4 py-3 text-right">Hệ số</th>
+                    <th class="px-4 py-3 text-right">Đơn giá áp dụng</th>
+                </tr>
+                </thead>
+                <tbody id="tariffTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- MODAL XÁC THỰC & KÍCH HOẠT (2 NHỊP) -->
+<div id="checkInModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+        <div class="bg-slate-900 text-white px-6 py-4">
+            <h3 class="font-bold text-base">Xác thực & Kích hoạt thiết bị</h3>
+            <p id="checkInModalSubtitle" class="text-xs text-slate-400 mt-0.5"></p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5">
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Tài khoản xác thực:</span>
+                    <strong id="checkInIdentity" class="text-slate-900"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Loại dịch vụ:</span>
+                    <strong id="checkInServiceLabel" class="text-slate-900"></strong>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-slate-700">Bước 1: Nhập mã định vị trên thiết bị</label>
+                    <span id="verifyStatusBadge" class="hidden text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            ✓ Đã xác thực
+                        </span>
+                </div>
+                <div class="flex gap-2">
+                    <input id="inputVerifyDeviceCode" type="text" placeholder="Nhập mã dán trên ô đỗ / trụ sạc..."
+                           class="flex-1 px-3.5 py-2 text-sm font-mono uppercase border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                    <button id="btnVerifyCode" type="button" onclick="verifyDeviceCodeStep()"
+                            class="px-4 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white rounded-lg shrink-0 transition">
+                        Xác thực
+                    </button>
+                </div>
+                <p id="verifyFeedback" class="hidden text-xs rounded-lg px-3 py-2 border"></p>
+            </div>
+
+            <div id="stepActivateBox" class="pt-3 border-t border-slate-100 space-y-2 opacity-50">
+                <div class="text-xs font-bold text-slate-700">Bước 2: Kích hoạt sử dụng dịch vụ</div>
+                <p id="activateHint" class="text-xs text-slate-500"></p>
+                <button id="btnActivateSession" type="button" disabled onclick="confirmActivateSession()"
+                        class="w-full py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white transition">
+                    Kích hoạt
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-end">
+            <button type="button" onclick="closeCheckInModal()"
+                    class="px-4 py-1.5 text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg">
+                Đóng
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận hủy phiên -->
+<div id="cancelModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+        <div class="px-6 pt-6 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-lg shrink-0">!</div>
+                <div>
+                    <h3 class="font-bold text-base text-slate-900">Xác nhận hủy phiên đặt chỗ</h3>
+                    <p id="cancelModalSubtitle" class="text-xs text-slate-500 mt-0.5"></p>
+                </div>
+            </div>
+            <div id="cancelPolicyBox" class="mt-4 p-3.5 rounded-xl text-xs leading-relaxed border"></div>
+        </div>
+        <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-100 flex justify-end gap-2">
+            <button type="button" onclick="closeCancelModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg transition">
+                Giữ lại phiên
+            </button>
+            <button id="btnConfirmCancel" type="button" onclick="confirmCancelSession()"
+                    class="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition">
+                Xác nhận hủy
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal hoàn tất phiên sạc điện (Nhập kWh) -->
+<div id="completeModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6">
+        <h3 class="font-bold text-base text-slate-900">Hoàn tất phiên sạc điện</h3>
+        <p id="completeModalDesc" class="text-xs text-slate-500 mt-1"></p>
+
+        <form id="completeChargingForm" class="mt-4 space-y-4">
+            <input type="hidden" id="completeSessionId" />
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Lượng điện tiêu thụ (kWh)</label>
+                <input id="inputKwh" type="number" step="0.01" min="0.01" max="999999" required placeholder="Ví dụ: 12.50"
+                       class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeCompleteModal()"
+                        class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+                    Đóng
+                </button>
+                <button id="btnConfirmComplete" type="submit"
+                        class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">
+                    Xác nhận & Thanh toán
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+    const currentUser = requireAuth();
+    if (!currentUser) throw new Error('Redirecting...');
+
+    if (currentUser.role === 'ADMIN') {
+        const adminBtn = document.getElementById('btnBackToAdmin');
+        if (adminBtn) adminBtn.classList.remove('hidden');
+    }
+
+    document.getElementById('headerUserName').textContent = currentUser.fullName || 'Khách hàng';
+    document.getElementById('headerUserPhone').textContent = currentUser.phoneNumber || `ID #${currentUser.id}`;
+
+    const SUBTYPE_CONFIG = {
+        PARKING: [
+            { value: '2_WHEELER', title: 'Xe 2 bánh', desc: 'Xe máy / Xe đạp điện', field: 'spot2WheelerFree' },
+            { value: '4_WHEELER', title: 'Xe 4 bánh', desc: 'Ô tô con / SUV / Bán tải', field: 'spot4WheelerFree' }
+        ],
+        CHARGING: [
+            { value: 'CCS2', title: 'Cổng sạc nhanh CCS2', desc: 'Sạc nhanh DC công suất cao', field: 'chargerCcs2Free' },
+            { value: 'TYPE_2', title: 'Cổng sạc TYPE_2', desc: 'Sạc xoay chiều AC tiêu chuẩn', field: 'chargerType2Free' }
+        ]
+    };
+
+    let searchMode = 'nearby';
+    let selectedServiceType = null;
+    let selectedSubType = null;
+    let lastMatchedLocations = [];
+    let mySessions = [];
+    let pendingCheckInSession = null;
+    let verifiedDeviceCode = null;
+    let pendingCancelSessionId = null;
+    let countdownInterval = null;
+
+    function switchSearchMode(mode) {
+        searchMode = mode;
+        const isNearby = mode === 'nearby';
+
+        document.getElementById('nearbySearchFlow').classList.toggle('hidden', !isNearby);
+        document.getElementById('codeSearchForm').classList.toggle('hidden', isNearby);
+        document.getElementById('searchResultSection').classList.add('hidden');
+
+        document.getElementById('modeBtnNearby').className = isNearby
+            ? 'px-3.5 py-2 rounded-lg bg-slate-900 text-white transition'
+            : 'px-3.5 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+        document.getElementById('modeBtnCode').className = !isNearby
+            ? 'px-3.5 py-2 rounded-lg bg-slate-900 text-white transition'
+            : 'px-3.5 py-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+    }
+
+    function selectServiceType(serviceType) {
+        selectedServiceType = serviceType;
+        selectedSubType = null;
+
+        const isParking = serviceType === 'PARKING';
+        document.getElementById('btnServiceParking').className = isParking
+            ? 'text-left p-4 rounded-xl border-2 border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20 transition flex items-center gap-3.5'
+            : 'text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-400 transition flex items-center gap-3.5';
+
+        document.getElementById('btnServiceCharging').className = !isParking
+            ? 'text-left p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20 transition flex items-center gap-3.5'
+            : 'text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 transition flex items-center gap-3.5';
+
+        document.getElementById('subTypeStepTitle').textContent = isParking
+            ? 'Chọn loại phương tiện đỗ xe'
+            : 'Chọn chuẩn cổng sạc điện';
+
+        document.getElementById('subTypeOptions').innerHTML = SUBTYPE_CONFIG[serviceType].map(opt => `
+                <button type="button" id="btnSub_${opt.value}" onclick="selectSubType('${opt.value}')"
+                        class="text-left p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-400 transition">
+                    <div class="font-bold text-sm text-slate-900">${escapeHtml(opt.title)}</div>
+                    <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(opt.desc)}</div>
+                </button>
+            `).join('');
+
+        document.getElementById('stepSubType').classList.remove('hidden');
+        document.getElementById('searchForm').classList.add('hidden');
+        document.getElementById('searchResultSection').classList.add('hidden');
+    }
+
+    function selectSubType(subType) {
+        selectedSubType = subType;
+        const isParking = selectedServiceType === 'PARKING';
+        const activeCls = isParking
+            ? 'text-left p-3.5 rounded-xl border-2 border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20 transition'
+            : 'text-left p-3.5 rounded-xl border-2 border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500/20 transition';
+        const inactiveCls = 'text-left p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-400 transition';
+
+        SUBTYPE_CONFIG[selectedServiceType].forEach(opt => {
+            const el = document.getElementById(`btnSub_${opt.value}`);
+            if (el) el.className = (opt.value === subType) ? activeCls : inactiveCls;
+        });
+
+        document.getElementById('searchForm').classList.remove('hidden');
+        document.getElementById('searchResultSection').classList.add('hidden');
+    }
+
+    function useMyLocation() {
+        if (!navigator.geolocation) {
+            showToast('Trình duyệt không hỗ trợ lấy vị trí hiện tại.', 'warning');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                document.getElementById('inputLat').value = pos.coords.latitude.toFixed(6);
+                document.getElementById('inputLng').value = pos.coords.longitude.toFixed(6);
+                showToast('Đã lấy vị trí hiện tại của bạn. Bấm "Tìm kiếm" để xem trạm khả dụng.', 'success');
+            },
+            () => showToast('Không thể truy cập vị trí hiện tại. Hãy kiểm tra quyền định vị trên trình duyệt.', 'warning')
+        );
+    }
+
+    async function executeNearbySearch() {
+        if (!selectedServiceType || !selectedSubType) {
+            showToast('Vui lòng chọn đầy đủ dịch vụ và phân loại trước khi tìm kiếm.', 'warning');
+            return;
+        }
+
+        const lat = parseFloat(document.getElementById('inputLat').value);
+        const lng = parseFloat(document.getElementById('inputLng').value);
+        const radius = parseFloat(document.getElementById('inputRadius').value);
+        const subInfo = SUBTYPE_CONFIG[selectedServiceType].find(x => x.value === selectedSubType);
+
+        const btn = document.getElementById('btnSearchSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Đang tìm...';
+
+        try {
+            const rawLocations = await apiFetch(`/api/locations/search?lat=${lat}&lng=${lng}&radius=${radius}`);
+            lastMatchedLocations = rawLocations.filter(loc => Number(loc[subInfo.field] || 0) > 0);
+
+            const serviceName = selectedServiceType === 'PARKING' ? 'Đỗ xe' : 'Sạc điện';
+            document.getElementById('resultHeading').textContent =
+                `Trạm khả dụng cho: ${serviceName} — ${subInfo.title} (bán kính ${radius} km)`;
+            document.getElementById('locationCount').textContent = `${lastMatchedLocations.length} trạm`;
+
+            renderNearbyLocations(subInfo);
+            const resultSec = document.getElementById('searchResultSection');
+            resultSec.classList.remove('hidden');
+            resultSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch {} finally {
+            btn.disabled = false;
+            btn.textContent = 'Tìm kiếm';
+        }
+    }
+
+    function renderNearbyLocations(subInfo) {
+        const container = document.getElementById('locationList');
+        if (!lastMatchedLocations.length) {
+            container.innerHTML = `
+                    <div class="col-span-full text-center text-sm text-slate-400 py-10">
+                        Không có trạm nào còn vị trí <strong>${escapeHtml(subInfo.title)}</strong> trong bán kính này.<br/>
+                        Hãy thử tăng bán kính tìm kiếm.
+                    </div>`;
+            return;
+        }
+
+        const isParking = selectedServiceType === 'PARKING';
+        const pillCls = isParking
+            ? 'bg-blue-50 border-blue-200 text-blue-800'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+
+        container.innerHTML = lastMatchedLocations.map(loc => {
+            const freeCount = loc[subInfo.field];
+            return `
+                    <div onclick="openStationDetail(${loc.locationId}, '${selectedServiceType}', '${selectedSubType}')"
+                         class="cursor-pointer group rounded-xl border border-slate-200 hover:border-emerald-500 hover:shadow-md p-4 transition flex flex-col justify-between gap-3 bg-white">
+                        <div>
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <span class="text-[11px] font-mono text-slate-400">${escapeHtml(loc.locationCode)}</span>
+                                    <div class="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition mt-0.5">
+                                        ${escapeHtml(loc.name)}
+                                    </div>
+                                </div>
+                                <span class="shrink-0 px-2.5 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700">
+                                    ${loc.distanceKm} km
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">${escapeHtml(loc.address)}</div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                            <span class="border rounded-lg px-3 py-1 text-xs font-bold ${pillCls}">
+                                ${escapeHtml(subInfo.title)}: ${freeCount} vị trí khả dụng
+                            </span>
+                            <span class="text-xs font-semibold text-emerald-600 group-hover:translate-x-0.5 transition whitespace-nowrap">
+                                Chọn vị trí →
+                            </span>
+                        </div>
+                    </div>
+                `;
+        }).join('');
+    }
+
+    async function executeCodeSearch() {
+        const code = document.getElementById('inputLocationCode').value.trim().toUpperCase();
+        if (!code) return;
+
+        const btn = document.getElementById('btnCodeSearchSubmit');
+        btn.disabled = true;
+        btn.textContent = 'Đang tra cứu...';
+
+        try {
+            const allLocations = await apiFetch('/api/locations');
+            const matched = allLocations.find(l => (l.locationCode || '').toUpperCase() === code);
+
+            if (!matched) {
+                showToast(`Không tìm thấy khu vực nào có mã "${code}".`, 'error', 'NOT_FOUND');
+                document.getElementById('searchResultSection').classList.add('hidden');
+                return;
+            }
+
+            const devices = await apiFetch(`/api/locations/${matched.id}/devices`);
+            const counts = {
+                spot2: devices.filter(d => d.serviceType === 'PARKING' && d.subType === '2_WHEELER').length,
+                spot4: devices.filter(d => d.serviceType === 'PARKING' && d.subType === '4_WHEELER').length,
+                ccs2: devices.filter(d => d.serviceType === 'CHARGING' && d.subType === 'CCS2').length,
+                type2: devices.filter(d => d.serviceType === 'CHARGING' && d.subType === 'TYPE_2').length
+            };
+
+            const stationObj = {
+                locationId: matched.id,
+                locationCode: matched.locationCode,
+                name: matched.name,
+                address: matched.address
+            };
+            lastMatchedLocations = [stationObj];
+
+            const pills = [];
+            if (counts.spot2 > 0) pills.push(`<span class="border rounded-lg px-2.5 py-1 text-xs font-bold bg-blue-50 border-blue-200 text-blue-800">Xe 2 bánh: ${counts.spot2} vị trí khả dụng</span>`);
+            if (counts.spot4 > 0) pills.push(`<span class="border rounded-lg px-2.5 py-1 text-xs font-bold bg-blue-50 border-blue-200 text-blue-800">Xe 4 bánh: ${counts.spot4} vị trí khả dụng</span>`);
+            if (counts.ccs2 > 0) pills.push(`<span class="border rounded-lg px-2.5 py-1 text-xs font-bold bg-emerald-50 border-emerald-200 text-emerald-800">Sạc CCS2: ${counts.ccs2} vị trí khả dụng</span>`);
+            if (counts.type2 > 0) pills.push(`<span class="border rounded-lg px-2.5 py-1 text-xs font-bold bg-emerald-50 border-emerald-200 text-emerald-800">Sạc TYPE_2: ${counts.type2} vị trí khả dụng</span>`);
+
+            document.getElementById('resultHeading').textContent = `Nhận diện khu vực mã: ${matched.locationCode}`;
+            document.getElementById('locationCount').textContent = `${devices.length} vị trí trống`;
+
+            document.getElementById('locationList').innerHTML = `
+                    <div onclick="openStationDetail(${matched.id}, '', '')"
+                         class="col-span-full cursor-pointer group rounded-xl border-2 border-emerald-500/60 hover:border-emerald-600 hover:shadow-md p-5 transition bg-white space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <span class="px-2 py-0.5 text-xs font-mono font-bold rounded bg-slate-900 text-white">${escapeHtml(matched.locationCode)}</span>
+                                <div class="font-bold text-base text-slate-900 group-hover:text-emerald-700 mt-1.5">${escapeHtml(matched.name)}</div>
+                                <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(matched.address)}</div>
+                            </div>
+                            <span class="text-xs font-bold text-emerald-600 whitespace-nowrap shrink-0">
+                                Xem & Đặt chỗ →
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                            ${pills.length ? pills.join('') : '<span class="text-xs text-red-600 font-semibold">Hiện tại khu vực này đã hết vị trí trống.</span>'}
+                        </div>
+                    </div>
+                `;
+
+            const resultSec = document.getElementById('searchResultSection');
+            resultSec.classList.remove('hidden');
+            resultSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch {} finally {
+            btn.disabled = false;
+            btn.textContent = 'Kiểm tra khu vực';
+        }
+    }
+
+    function openStationDetail(locationId, serviceType, subType) {
+        const loc = lastMatchedLocations.find(l => l.locationId === locationId);
+        if (loc) {
+            sessionStorage.setItem('ev_hub_selected_station', JSON.stringify(loc));
+        }
+        const params = new URLSearchParams({ locationId: String(locationId) });
+        if (serviceType) params.set('serviceType', serviceType);
+        if (subType) params.set('subType', subType);
+        window.location.href = `/station-detail.html?${params.toString()}`;
+    }
+
+    function switchView(view) {
+        ['search', 'sessions', 'tariffs'].forEach(v => {
+            const cap = v.charAt(0).toUpperCase() + v.slice(1);
+            document.getElementById(`view${cap}`).classList.toggle('hidden', v !== view);
+
+            const activeDesktop = 'px-3.5 py-2 rounded-md bg-emerald-600 text-white';
+            const inactiveDesktop = 'px-3.5 py-2 rounded-md text-slate-300 hover:text-white';
+            const navBtn = document.getElementById(`nav${cap}`);
+            if (navBtn) {
+                navBtn.className = (v === view ? activeDesktop : inactiveDesktop)
+                    + (v === 'sessions' ? ' flex items-center gap-1.5' : '');
+            }
+
+            const mBtn = document.getElementById(`mNav${cap}`);
+            if (mBtn) {
+                mBtn.className = v === view ? 'py-2.5 bg-emerald-600 text-white' : 'py-2.5 text-slate-300';
+            }
+        });
+
+        if (view === 'sessions') {
+            loadMySessions();
+        } else if (view === 'tariffs') {
+            loadTariffs();
+        }
+    }
+
+    function parseVnDateTime(isoStr) {
+        if (!isoStr) return null;
+        const s = String(isoStr);
+        const hasTz = /[zZ]|[+-]\d{2}:\d{2}$/.test(s);
+        return new Date(hasTz ? s : s + '+07:00');
+    }
+
+    async function loadMySessions() {
+        try {
+            mySessions = await apiFetch(`/api/users/${currentUser.id}/sessions`);
+            const activeCount = mySessions.filter(s => s.status === 'BOOKED' || s.status === 'IN_PROGRESS').length;
+            const badge = document.getElementById('activeSessionBadge');
+            if (activeCount > 0) {
+                badge.textContent = activeCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            renderSessions(mySessions);
+            startCountdownLoop();
+        } catch {}
+    }
+
+    function renderSessions(sessions) {
+        const container = document.getElementById('sessionList');
+        if (!sessions.length) {
+            container.innerHTML = `
+                    <div class="bg-white rounded-xl p-10 text-center border border-slate-200">
+                        <p class="text-sm text-slate-500">Bạn chưa có phiên đỗ xe hoặc sạc điện nào.</p>
+                        <button onclick="switchView('search')" class="mt-3 px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg">
+                            Tìm trạm ngay
+                        </button>
+                    </div>`;
+            return;
+        }
+
+        const statusMeta = {
+            'BOOKED': { label: 'Đã đặt chỗ', cls: 'bg-amber-100 text-amber-800 border-amber-300' },
+            'IN_PROGRESS': { label: 'Đang sử dụng', cls: 'bg-blue-100 text-blue-800 border-blue-300' },
+            'COMPLETED': { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            'CANCELLED': { label: 'Đã hủy', cls: 'bg-slate-200 text-slate-700 border-slate-300' },
+            'EXPIRED': { label: 'Quá hạn 15p', cls: 'bg-red-100 text-red-800 border-red-300' }
+        };
+
+        container.innerHTML = sessions.map(s => {
+            const meta = statusMeta[s.status] || { label: s.status, cls: 'bg-slate-100 text-slate-700' };
+            const deviceCode = s.spotCode || s.chargerCode || '—';
+            const isCharging = s.serviceType === 'CHARGING';
+
+            let cancelNoteBadge = '';
+            if (s.status === 'CANCELLED') {
+                const isFree = Number(s.totalAmount || 0) === 0;
+                cancelNoteBadge = isFree
+                    ? `<span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Hủy miễn phí (trong 5p)</span>`
+                    : `<span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">Hủy muộn (mất cọc)</span>`;
+            }
+
+            let actionsHtml = '';
+            if (s.status === 'BOOKED') {
+                actionsHtml = `
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="countdown-pill text-xs font-mono font-bold px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200"
+                                  data-expires="${escapeHtml(s.expiresAt)}">Đang tính...</span>
+                            <button onclick="openCheckInModal(${s.id})"
+                                    class="px-3.5 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                                Xác thực & Kích hoạt
+                            </button>
+                            <button onclick="openCancelModal(${s.id})"
+                                    class="px-3.5 py-1.5 text-xs font-semibold bg-white hover:bg-red-50 text-red-600 border border-red-300 rounded-lg">
+                                Hủy chỗ
+                            </button>
+                        </div>`;
+            } else if (s.status === 'IN_PROGRESS') {
+                const completeAction = isCharging
+                    ? `openCompleteModal(${s.id})`
+                    : `handleCompleteParking(${s.id})`;
+                actionsHtml = `
+                        <button onclick="${completeAction}"
+                                class="px-4 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">
+                            Kết thúc & Thanh toán
+                        </button>`;
+            }
+
+            return `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                            <div class="flex items-center flex-wrap gap-2">
+                                <span class="text-xs font-mono text-slate-400">#${s.id}</span>
+                                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full border ${meta.cls}">${meta.label}</span>
+                                ${cancelNoteBadge}
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
+                                    ${isCharging ? '⚡ Sạc điện' : '🅿️ Đỗ xe'} · ${escapeHtml(deviceCode)}
+                                </span>
+                                <span class="font-semibold text-sm text-slate-900">${escapeHtml(s.locationName || '')}</span>
+                            </div>
+                            <div>${actionsHtml}</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-3 text-xs">
+                            <div>
+                                <div class="text-slate-400">Đặt lúc</div>
+                                <div class="font-medium mt-0.5">${formatDateTime(s.reservedAt)}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Hạn kích hoạt</div>
+                                <div class="font-medium mt-0.5">${formatDateTime(s.expiresAt)}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Bắt đầu sử dụng</div>
+                                <div class="font-medium mt-0.5">${formatDateTime(s.startTime)}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Kết thúc</div>
+                                <div class="font-medium mt-0.5">${formatDateTime(s.endTime)}</div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Tiền cọc${isCharging ? ' / Điện năng' : ''}</div>
+                                <div class="font-medium mt-0.5">
+                                    ${formatMoney(s.depositAmount)}${s.kwhConsumed != null ? ` · <span class="text-emerald-700 font-bold">${s.kwhConsumed} kWh</span>` : ''}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-slate-400">Tổng thanh toán</div>
+                                <div class="font-bold text-sm mt-0.5 ${s.totalAmount != null ? 'text-emerald-700' : 'text-slate-400'}">
+                                    ${s.totalAmount != null ? formatMoney(s.totalAmount) : 'Chưa chốt'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }).join('');
+    }
+
+    function startCountdownLoop() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        const tick = () => {
+            const now = Date.now();
+            document.querySelectorAll('.countdown-pill').forEach(el => {
+                const exp = parseVnDateTime(el.dataset.expires);
+                if (!exp) return;
+                const diffSec = Math.floor((exp.getTime() - now) / 1000);
+                if (diffSec <= 0) {
+                    el.textContent = 'Hết hạn (chờ quét)';
+                    el.className = 'countdown-pill text-xs font-mono font-bold px-2.5 py-1 rounded bg-red-50 text-red-700 border border-red-200';
+                } else {
+                    const mm = String(Math.floor(diffSec / 60)).padStart(2, '0');
+                    const ss = String(diffSec % 60).padStart(2, '0');
+                    el.textContent = `Còn ${mm}:${ss}`;
+                }
+            });
+        };
+        tick();
+        countdownInterval = setInterval(tick, 1000);
+    }
+
+    function openCheckInModal(sessionId) {
+        const session = mySessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        pendingCheckInSession = session;
+        verifiedDeviceCode = null;
+        const isCharging = session.serviceType === 'CHARGING';
+
+        document.getElementById('checkInModalSubtitle').textContent =
+            `Phiên #${session.id} — ${session.locationName || ''}`;
+        document.getElementById('checkInIdentity').textContent =
+            `${currentUser.fullName || 'Khách hàng'} (${currentUser.phoneNumber || '#' + currentUser.id})`;
+        document.getElementById('checkInServiceLabel').textContent =
+            isCharging ? '⚡ Sạc xe điện (CHARGING)' : '🅿️ Đỗ xe (PARKING)';
+
+        const input = document.getElementById('inputVerifyDeviceCode');
+        input.value = '';
+        input.disabled = false;
+
+        document.getElementById('btnVerifyCode').disabled = false;
+        document.getElementById('verifyStatusBadge').classList.add('hidden');
+        document.getElementById('verifyFeedback').classList.add('hidden');
+
+        const activateBox = document.getElementById('stepActivateBox');
+        activateBox.classList.add('opacity-50');
+        document.getElementById('activateHint').textContent = isCharging
+            ? 'Sau khi xác thực hợp lệ, bấm nút dưới để gửi lệnh cấp điện đến trụ sạc và bắt đầu tính giờ.'
+            : 'Sau khi xác thực hợp lệ, bấm nút dưới để gửi lệnh mở khóa rào chắn ô đỗ và bắt đầu tính giờ.';
+
+        const btnActivate = document.getElementById('btnActivateSession');
+        btnActivate.disabled = true;
+        btnActivate.textContent = isCharging ? 'Kích hoạt phiên sạc điện' : 'Kích hoạt mở rào chắn ô đỗ';
+
+        document.getElementById('checkInModal').classList.remove('hidden');
+        setTimeout(() => input.focus(), 50);
+    }
+
+    function closeCheckInModal() {
+        pendingCheckInSession = null;
+        verifiedDeviceCode = null;
+        document.getElementById('checkInModal').classList.add('hidden');
+    }
+
+    function verifyDeviceCodeStep() {
+        if (!pendingCheckInSession) return;
+        const input = document.getElementById('inputVerifyDeviceCode');
+        const entered = input.value.trim();
+        const expected = pendingCheckInSession.spotCode || pendingCheckInSession.chargerCode || '';
+        const feedback = document.getElementById('verifyFeedback');
+
+        if (!entered) {
+            feedback.className = 'text-xs rounded-lg px-3 py-2 border bg-amber-50 border-amber-200 text-amber-800';
+            feedback.textContent = 'Vui lòng nhập mã định vị hiển thị tại ô đỗ hoặc trụ sạc.';
+            return;
+        }
+
+        if (entered.toUpperCase() !== expected.toUpperCase()) {
+            feedback.className = 'text-xs rounded-lg px-3 py-2 border bg-red-50 border-red-200 text-red-700';
+            feedback.textContent = 'Mã định vị không khớp với vị trí bạn đã đặt. Vui lòng kiểm tra lại mã dán trên thiết bị.';
+            return;
+        }
+
+        verifiedDeviceCode = entered.toUpperCase();
+        input.disabled = true;
+        document.getElementById('btnVerifyCode').disabled = true;
+        document.getElementById('verifyStatusBadge').classList.remove('hidden');
+
+        feedback.className = 'text-xs rounded-lg px-3 py-2 border bg-emerald-50 border-emerald-200 text-emerald-800';
+        feedback.textContent = `Xác thực danh tính và mã thiết bị ${verifiedDeviceCode} hợp lệ. Bạn có thể bấm Kích hoạt ngay bây giờ.`;
+
+        document.getElementById('stepActivateBox').classList.remove('opacity-50');
+        document.getElementById('btnActivateSession').disabled = false;
+    }
+
+    async function confirmActivateSession() {
+        if (!pendingCheckInSession || !verifiedDeviceCode) return;
+        const sessionId = pendingCheckInSession.id;
+        const isCharging = pendingCheckInSession.serviceType === 'CHARGING';
+        const btn = document.getElementById('btnActivateSession');
+        btn.disabled = true;
+        btn.textContent = 'Đang gửi lệnh kích hoạt...';
+
+        try {
+            await apiFetch(`/api/sessions/${sessionId}/check-in`, {
+                method: 'PATCH',
+                body: { deviceCode: verifiedDeviceCode }
+            });
+            closeCheckInModal();
+            showToast(
+                isCharging
+                    ? `Kích hoạt trụ sạc ${verifiedDeviceCode} thành công! Đã bắt đầu cấp điện.`
+                    : `Kích hoạt ô đỗ ${verifiedDeviceCode} thành công! Rào chắn đã mở.`,
+                'success'
+            );
+            loadMySessions();
+        } catch {
+            btn.disabled = false;
+            btn.textContent = isCharging ? 'Kích hoạt phiên sạc điện' : 'Kích hoạt mở rào chắn ô đỗ';
+        }
+    }
+
+    function openCancelModal(sessionId) {
+        const session = mySessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        pendingCancelSessionId = sessionId;
+        const deviceCode = session.spotCode || session.chargerCode || '';
+        document.getElementById('cancelModalSubtitle').textContent =
+            `Phiên #${session.id} · ${deviceCode} — ${session.locationName || ''}`;
+
+        const reserved = parseVnDateTime(session.reservedAt);
+        const freeUntilMs = reserved ? reserved.getTime() + 5 * 60 * 1000 : 0;
+        const isFreeNow = Date.now() <= freeUntilMs;
+
+        const box = document.getElementById('cancelPolicyBox');
+        if (isFreeNow) {
+            box.className = 'mt-4 p-3.5 rounded-xl text-xs leading-relaxed border bg-emerald-50 border-emerald-200 text-emerald-900';
+            box.innerHTML = `
+                    <div class="font-bold text-emerald-800 mb-0.5">Hủy miễn phí (0 ₫)</div>
+                    Bạn vẫn đang trong khoảng <strong>5 phút đầu</strong> kể từ lúc đặt chỗ. Hủy ngay bây giờ sẽ không bị tính phí cọc.
+                `;
+        } else {
+            box.className = 'mt-4 p-3.5 rounded-xl text-xs leading-relaxed border bg-red-50 border-red-200 text-red-900';
+            box.innerHTML = `
+                    <div class="font-bold text-red-800 mb-0.5">Lưu ý phí phạt giữ chỗ</div>
+                    Đã quá <strong>5 phút</strong> kể từ lúc đặt chỗ. Nếu xác nhận hủy, hệ thống sẽ giữ lại tiền cọc <strong>${formatMoney(session.depositAmount)}</strong>.
+                `;
+        }
+
+        document.getElementById('cancelModal').classList.remove('hidden');
+    }
+
+    function closeCancelModal() {
+        pendingCancelSessionId = null;
+        document.getElementById('cancelModal').classList.add('hidden');
+    }
+
+    async function confirmCancelSession() {
+        if (!pendingCancelSessionId) return;
+        const sessionId = pendingCancelSessionId;
+        const btn = document.getElementById('btnConfirmCancel');
+        btn.disabled = true;
+        btn.textContent = 'Đang hủy...';
+
+        try {
+            const res = await apiFetch(`/api/sessions/${sessionId}/cancel`, { method: 'PATCH' });
+            closeCancelModal();
+            const feeText = Number(res.totalAmount) > 0
+                ? `Phí phạt giữ chỗ: ${formatMoney(res.totalAmount)}`
+                : 'Hủy miễn phí (0 ₫)';
+            showToast(`Đã hủy phiên #${sessionId}. ${feeText}`, 'success');
+            loadMySessions();
+        } catch {} finally {
+            btn.disabled = false;
+            btn.textContent = 'Xác nhận hủy';
+        }
+    }
+
+    async function handleCompleteParking(sessionId) {
+        try {
+            const res = await apiFetch(`/api/sessions/${sessionId}/complete`, { method: 'PATCH', body: {} });
+            showToast(`Hoàn tất phiên đỗ xe #${sessionId}! Tổng tiền: ${formatMoney(res.totalAmount)}`, 'success');
+            loadMySessions();
+        } catch {}
+    }
+
+    function openCompleteModal(sessionId) {
+        const session = mySessions.find(s => s.id === sessionId);
+        const deviceCode = session ? (session.spotCode || session.chargerCode || '') : '';
+        document.getElementById('completeSessionId').value = sessionId;
+        document.getElementById('completeModalDesc').textContent = `Phiên #${sessionId} — Trụ sạc ${deviceCode}`;
+        document.getElementById('inputKwh').value = '';
+        document.getElementById('completeModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('inputKwh').focus(), 50);
+    }
+
+    function closeCompleteModal() {
+        document.getElementById('completeModal').classList.add('hidden');
+    }
+
+    document.getElementById('completeChargingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sessionId = document.getElementById('completeSessionId').value;
+        const kwh = parseFloat(document.getElementById('inputKwh').value);
+        const btn = document.getElementById('btnConfirmComplete');
+        btn.disabled = true;
+
+        try {
+            const res = await apiFetch(`/api/sessions/${sessionId}/complete`, {
+                method: 'PATCH',
+                body: { kwhConsumed: kwh }
+            });
+            closeCompleteModal();
+            showToast(`Hoàn tất sạc #${sessionId}! Tổng tiền: ${formatMoney(res.totalAmount)}`, 'success');
+            loadMySessions();
+        } catch {} finally {
+            btn.disabled = false;
+        }
+    });
+
+    async function loadTariffs() {
+        try {
+            const tariffs = await apiFetch('/api/tariffs');
+            const tbody = document.getElementById('tariffTableBody');
+            if (!tariffs.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Chưa có dữ liệu bảng giá.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = tariffs.map(t => {
+                const isCharging = t.serviceType === 'CHARGING';
+                const unit = isCharging ? '/ kWh' : '/ giờ';
+                const effective = Number(t.basePrice) * Number(t.multiplier);
+                return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 font-semibold">
+                                <span class="px-2 py-0.5 text-xs rounded-full ${isCharging ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">
+                                    ${isCharging ? '⚡ CHARGING' : '🅿️ PARKING'}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 font-mono text-xs">${escapeHtml(t.startTime)} → ${escapeHtml(t.endTime)}</td>
+                            <td class="px-4 py-3 text-right">${formatMoney(t.basePrice)}</td>
+                            <td class="px-4 py-3 text-right font-mono">×${Number(t.multiplier).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-right font-bold text-emerald-700">${formatMoney(effective)} <span class="text-xs font-normal text-slate-400">${unit}</span></td>
+                        </tr>
+                    `;
+            }).join('');
+        } catch {}
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        executeNearbySearch();
+    });
+
+    document.getElementById('codeSearchForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        executeCodeSearch();
+    });
+
+    document.getElementById('inputVerifyDeviceCode').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            verifyDeviceCodeStep();
+        }
+    });
+
+    const flashMsg = sessionStorage.getItem('ev_hub_flash_toast');
+    if (flashMsg) {
+        sessionStorage.removeItem('ev_hub_flash_toast');
+        showToast(flashMsg, 'success');
+    }
+
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    if (initialTab === 'sessions' || initialTab === 'tariffs') {
+        switchView(initialTab);
+    }
+
+    loadMySessions();
+</script>
+</body>
+</html>

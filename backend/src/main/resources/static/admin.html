@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartHub EV & Parking — Cổng Quản trị</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+
+<div class="min-h-screen flex flex-col lg:flex-row">
+    <aside class="w-full lg:w-64 bg-slate-900 text-slate-200 flex flex-col shrink-0 lg:h-screen lg:sticky lg:top-0">
+        <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">⚡</span>
+                <div>
+                    <div class="font-bold text-sm text-white leading-tight">SmartHub Admin</div>
+                    <div class="text-[11px] text-slate-400">Quản trị hệ thống</div>
+                </div>
+            </div>
+            <button type="button" onclick="toggleMobileSidebar()"
+                    class="lg:hidden px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-200">Menu</button>
+        </div>
+
+        <nav id="sidebarNav" class="hidden lg:flex flex-col flex-1 p-3 text-xs overflow-y-auto">
+            <div id="navItems" class="space-y-1"></div>
+            <div class="mt-auto pt-4 border-t border-slate-800 space-y-2.5">
+                <div class="px-3">
+                    <div id="sidebarAdminName" class="font-semibold text-white truncate"></div>
+                    <div id="sidebarAdminPhone" class="text-[11px] font-mono text-slate-400"></div>
+                </div>
+                <button type="button" onclick="logout()"
+                        class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white font-semibold transition">
+                    Đăng xuất
+                </button>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Mỗi tab là 1 <section> do admin-report.js tự dựng -->
+    <main id="main" class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto"></main>
+</div>
+
+<!-- Modal dùng chung cho mọi form thêm / sửa -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <form id="modalForm" class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+        <div class="bg-slate-900 text-white px-6 py-4"><h3 id="modalTitle" class="font-bold text-base"></h3></div>
+        <div id="modalBody" class="p-6 space-y-3.5 text-xs"></div>
+        <div class="px-6 pb-6 flex justify-end gap-2 text-xs">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">Hủy</button>
+            <button type="submit" class="px-4 py-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">Lưu</button>
+        </div>
+    </form>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/admin-reports.js"></script>
+
+<!-- ĐOẠN SCRIPT NÀY TỰ ĐỘNG ẨN HEADER CỦA CUSTOMER KHI NẰM TRONG IFRAME -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new MutationObserver(() => {
+            const iframe = document.getElementById('frame-search');
+            if (iframe && iframe.contentWindow) {
+                try {
+                    const style = iframe.contentDocument.createElement('style');
+                    style.innerHTML = 'header, nav, .header, .navbar { display: none !important; }';
+                    iframe.contentDocument.head.appendChild(style);
+                } catch (e) {
+                    // Bỏ qua lỗi cross-origin nếu có
+                }
+            }
+        });
+        observer.observe(document.getElementById('main'), { childList: true, subtree: true });
+    });
+</script>
+</body>
+</html>
