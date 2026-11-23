@@ -103,6 +103,7 @@ public interface AnalyticsRepository extends Repository<Location, Long> {
             """, nativeQuery = true)
     List<AvailableDeviceProjection> findAvailableDevicesByLocation(@Param("locationId") Long locationId);
 
+    // --- QUERY ĐỐI SOÁT DOANH THU (Đã có locationId trong WHERE) ---
     @Query(value = """
             WITH SessionLocations AS (
                 SELECT
@@ -127,12 +128,14 @@ public interface AnalyticsRepository extends Repository<Location, Long> {
                 COALESCE(SUM(sl.total_amount), 0) AS totalRevenue
             FROM LOCATIONS l
             LEFT JOIN SessionLocations sl ON l.id = sl.location_id
+            WHERE (:locationId IS NULL OR l.id = :locationId)
             GROUP BY l.id WITH ROLLUP
             ORDER BY GROUPING(l.id) ASC, totalRevenue DESC, locationCode ASC
             """, nativeQuery = true)
     List<RevenueSummaryProjection> getRevenueSummaryByLocation(
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("endDate") LocalDateTime endDate,
+            @Param("locationId") Long locationId);
 
     @Query(value = """
             SELECT

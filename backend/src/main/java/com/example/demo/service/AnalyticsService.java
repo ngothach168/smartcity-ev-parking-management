@@ -47,7 +47,8 @@ public class AnalyticsService {
         return analyticsRepository.findAvailableDevicesByLocation(locationId);
     }
 
-    public List<RevenueSummaryProjection> getRevenueSummary(LocalDate startDate, LocalDate endDate) {
+    // --- HÀM ĐỐI SOÁT DOANH THU (Đã thêm locationId) ---
+    public List<RevenueSummaryProjection> getRevenueSummary(LocalDate startDate, LocalDate endDate, Long locationId) {
         LocalDate today = LocalDate.now(VN_ZONE);
         LocalDate effectiveEnd = (endDate != null) ? endDate : today;
         LocalDate effectiveStart = (startDate != null) ? startDate : effectiveEnd.minusDays(30);
@@ -57,9 +58,14 @@ public class AnalyticsService {
                     "Ngày kết thúc (endDate) phải lớn hơn hoặc bằng ngày bắt đầu (startDate).");
         }
 
+        if (locationId != null && !locationRepository.existsById(locationId)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND,
+                    "Không tìm thấy địa điểm có ID = " + locationId);
+        }
+
         LocalDateTime startDateTime = effectiveStart.atStartOfDay();
         LocalDateTime endDateTime = effectiveEnd.atTime(LocalTime.of(23, 59, 59));
-        return analyticsRepository.getRevenueSummaryByLocation(startDateTime, endDateTime);
+        return analyticsRepository.getRevenueSummaryByLocation(startDateTime, endDateTime, locationId);
     }
 
     public List<DailyRevenueProjection> getDailyRevenue(

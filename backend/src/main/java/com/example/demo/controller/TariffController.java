@@ -1,11 +1,11 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.TariffRequest;
+import com.example.demo.dto.TariffPriceUpdateRequest;
 import com.example.demo.dto.TariffResponse;
+import com.example.demo.dto.TariffScheduleRequest;
 import com.example.demo.service.TariffService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,19 +28,19 @@ public class TariffController {
         return ResponseEntity.ok(tariffService.getTariffById(id));
     }
 
-    @PostMapping("/api/admin/tariffs")
-    public ResponseEntity<TariffResponse> createTariff(
+    @PutMapping("/api/admin/tariffs/schedule")
+    public ResponseEntity<List<TariffResponse>> replaceSchedule(
             @RequestHeader("X-Admin-Id") Long adminId,
-            @Valid @RequestBody TariffRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(tariffService.createTariff(adminId, request));
+            @Valid @RequestBody TariffScheduleRequest request) {
+        return ResponseEntity.ok(
+                tariffService.replaceSchedule(adminId, request.getServiceType(), request.getSlots()));
     }
 
-    @PutMapping("/api/admin/tariffs/{id}")
-    public ResponseEntity<TariffResponse> updateTariff(
+    @PatchMapping("/api/admin/tariffs/{id}/price")
+    public ResponseEntity<TariffResponse> updateTariffPrice(
             @RequestHeader("X-Admin-Id") Long adminId,
             @PathVariable Long id,
-            @Valid @RequestBody TariffRequest request) {
-        return ResponseEntity.ok(tariffService.updateTariff(adminId, id, request));
+            @Valid @RequestBody TariffPriceUpdateRequest request) {
+        return ResponseEntity.ok(tariffService.updateTariffPrice(adminId, id, request));
     }
 }

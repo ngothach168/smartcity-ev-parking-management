@@ -33,4 +33,7 @@ public class Tariff {
 
     @Column(name = "multiplier", nullable = false, precision = 3, scale = 2)
     private BigDecimal multiplier = new BigDecimal("1.00");
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean active = true;
 }

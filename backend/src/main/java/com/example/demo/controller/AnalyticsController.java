@@ -29,11 +29,13 @@ public class AnalyticsController {
         return ResponseEntity.ok(analyticsService.getAvailableDevices(id));
     }
 
+    // --- API ĐỐI SOÁT DOANH THU (Đã thêm locationId) ---
     @GetMapping("/api/admin/reports/revenue-summary")
     public ResponseEntity<List<RevenueSummaryProjection>> getRevenueSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(analyticsService.getRevenueSummary(startDate, endDate));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long locationId) {
+        return ResponseEntity.ok(analyticsService.getRevenueSummary(startDate, endDate, locationId));
     }
 
     @GetMapping("/api/admin/reports/daily-revenue")

@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.SessionCheckInRequest;
 import com.example.demo.dto.SessionCompleteRequest;
 import com.example.demo.dto.SessionCreateRequest;
 import com.example.demo.dto.SessionResponse;
@@ -29,8 +30,9 @@ public class SessionController {
     @PatchMapping("/api/sessions/{id}/check-in")
     public ResponseEntity<SessionResponse> checkIn(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long actorUserId) {
-        return ResponseEntity.ok(sessionService.checkIn(id, actorUserId));
+            @RequestHeader("X-User-Id") Long actorUserId,
+            @Valid @RequestBody SessionCheckInRequest request) {
+        return ResponseEntity.ok(sessionService.checkIn(id, actorUserId, request));
     }
 
     @PatchMapping("/api/sessions/{id}/cancel")
