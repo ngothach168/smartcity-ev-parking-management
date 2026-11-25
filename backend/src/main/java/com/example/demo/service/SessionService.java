@@ -29,7 +29,9 @@ public class SessionService {
 
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final long FREE_CANCEL_MINUTES = 5L;
+    private static final long EXPIRE_MINUTES = 15L;
     private static final LocalTime END_OF_DAY = LocalTime.of(23, 59, 59);
+    private static final BigDecimal DEPOSIT_AMOUNT = new BigDecimal("20000.00");
 
     private final SessionRepository sessionRepository;
     private final UserRepository userRepository;
@@ -52,7 +54,6 @@ public class SessionService {
 
         Session session = new Session();
         session.setUser(user);
-        session.setServiceType(serviceType);
         session.setStatus("BOOKED");
 
         if ("PARKING".equals(serviceType)) {
@@ -86,12 +87,8 @@ public class SessionService {
         }
 
         LocalTime nowTime = LocalTime.now(VN_ZONE).truncatedTo(ChronoUnit.SECONDS);
-        Tariff currentTariff = resolveTariffAt(serviceType, nowTime);
-        BigDecimal deposit = currentTariff.getBasePrice()
-                .multiply(currentTariff.getMultiplier())
-                .setScale(0, RoundingMode.HALF_UP)
-                .setScale(2, RoundingMode.UNNECESSARY);
-        session.setDepositAmount(deposit);
+        resolveTariffAt(serviceType, nowTime);
+        session.setDepositAmount(DEPOSIT_AMOUNT);
 
         Session saved = sessionRepository.saveAndFlush(session);
         return sessionMapper.toResponse(saved);
@@ -107,12 +104,13 @@ public class SessionService {
         }
 
         LocalDateTime now = LocalDateTime.now(VN_ZONE).truncatedTo(ChronoUnit.SECONDS);
-        if (session.getExpiresAt() != null && !now.isBefore(session.getExpiresAt())) {
+        if (session.getReservedAt() != null && !now.isBefore(session.getReservedAt().plusMinutes(EXPIRE_MINUTES))) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                     "Phiên đặt chỗ đã quá hạn 15 phút, không thể kích hoạt.");
         }
 
-        String expectedCode = "PARKING".equals(session.getServiceType())
+        String serviceType = resolveServiceType(session);
+        String expectedCode = "PARKING".equals(serviceType)
                 ? session.getParkingSpot().getSpotCode()
                 : session.getEvCharger().getChargerCode();
         String inputCode = (req != null && req.getDeviceCode() != null) ? req.getDeviceCode().trim() : "";
@@ -139,12 +137,13 @@ public class SessionService {
         }
 
         LocalDateTime now = LocalDateTime.now(VN_ZONE).truncatedTo(ChronoUnit.SECONDS);
-        if (session.getExpiresAt() != null && !now.isBefore(session.getExpiresAt())) {
+        if (session.getReservedAt() != null && !now.isBefore(session.getReservedAt().plusMinutes(EXPIRE_MINUTES))) {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                     "Phiên đặt chỗ đã quá hạn 15 phút và đang chờ hệ thống tự chuyển EXPIRED.");
         }
 
-        boolean withinFreeWindow = !now.isAfter(session.getReservedAt().plusMinutes(FREE_CANCEL_MINUTES));
+        boolean withinFreeWindow = session.getReservedAt() != null
+                && !now.isAfter(session.getReservedAt().plusMinutes(FREE_CANCEL_MINUTES));
         BigDecimal totalAmount = withinFreeWindow
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : session.getDepositAmount();
@@ -171,8 +170,9 @@ public class SessionService {
                     "Thời gian hoàn tất phải sau thời gian kích hoạt ít nhất 1 giây.");
         }
 
+        String serviceType = resolveServiceType(session);
         BigDecimal kwhConsumed = (req != null) ? req.getKwhConsumed() : null;
-        if ("PARKING".equals(session.getServiceType())) {
+        if ("PARKING".equals(serviceType)) {
             if (kwhConsumed != null) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST,
                         "Phiên đỗ xe (PARKING) không được nhập kwhConsumed.");
@@ -187,9 +187,8 @@ public class SessionService {
         }
 
         BigDecimal calculatedAmount = calculateSplitAmount(
-                session.getServiceType(), session.getStartTime(), endTime, kwhConsumed);
+                serviceType, session.getStartTime(), endTime, kwhConsumed);
 
-        // Nếu chi phí thực tế <= tiền cọc -> thu bằng tiền cọc (RB14 & mục 1.4.3)
         BigDecimal finalAmount = calculatedAmount.max(session.getDepositAmount());
 
         session.setStatus("COMPLETED");
@@ -228,6 +227,17 @@ public class SessionService {
         return sessions.stream()
                 .map(sessionMapper::toResponse)
                 .toList();
+    }
+
+    private String resolveServiceType(Session session) {
+        if (session.getParkingSpot() != null) {
+            return "PARKING";
+        }
+        if (session.getEvCharger() != null) {
+            return "CHARGING";
+        }
+        throw new BusinessException(ErrorCode.BAD_REQUEST,
+                "Phiên giao dịch không gắn với ô đỗ xe hay trụ sạc hợp lệ.");
     }
 
     private Session lockAndAuthorizeSession(Long sessionId, Long actorUserId) {
@@ -277,7 +287,6 @@ public class SessionService {
             LocalTime cursorTime = cursor.toLocalTime();
             Tariff slot = findTariffInList(tariffs, serviceType, cursorTime);
 
-            // Chặn bẫy 23:59:59 vắt qua nửa đêm: đẩy mốc kết thúc đoạn sang 00:00:00 ngày hôm sau
             LocalDateTime slotBoundary = slot.getEndTime().equals(END_OF_DAY)
                     ? cursor.toLocalDate().plusDays(1).atStartOfDay()
                     : cursor.toLocalDate().atTime(slot.getEndTime());
@@ -293,12 +302,10 @@ public class SessionService {
 
             BigDecimal segmentCost;
             if ("PARKING".equals(serviceType)) {
-                // (Số phút khung i / 60) * Giá cơ bản * Hệ số = (Số giây khung i / 3600) * Giá cơ bản * Hệ số
                 segmentCost = BigDecimal.valueOf(segSeconds)
                         .multiply(unitPrice)
                         .divide(secondsPerHour, 10, RoundingMode.HALF_UP);
             } else {
-                // (Số phút khung i / Tổng số phút) * kWh * Giá cơ bản * Hệ số = (Số giây khung i / Tổng số giây) * ...
                 segmentCost = BigDecimal.valueOf(segSeconds)
                         .multiply(kwhConsumed)
                         .multiply(unitPrice)
@@ -309,7 +316,6 @@ public class SessionService {
             cursor = segEnd;
         }
 
-        // Làm tròn đến hàng đơn vị VNĐ theo Mục 1.4.3, giữ 2 số thập phân (.00) khớp DECIMAL(12,2)
         return totalSum.setScale(0, RoundingMode.HALF_UP).setScale(2, RoundingMode.UNNECESSARY);
     }
 

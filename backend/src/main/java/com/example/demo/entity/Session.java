@@ -25,9 +25,6 @@ public class Session {
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private User user;
 
-    @Column(name = "service_type", nullable = false, length = 20, updatable = false)
-    private String serviceType;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ev_charger_id", updatable = false)
     private EvCharger evCharger;
@@ -42,10 +39,6 @@ public class Session {
     @Generated(event = EventType.INSERT)
     @Column(name = "reserved_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime reservedAt;
-
-    @Generated(event = EventType.INSERT)
-    @Column(name = "expires_at", insertable = false, updatable = false)
-    private LocalDateTime expiresAt;
 
     @Column(name = "start_time")
     private LocalDateTime startTime;

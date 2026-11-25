@@ -17,12 +17,14 @@ public class SessionMapper {
         EvCharger charger = session.getEvCharger();
         Location location = (spot != null) ? spot.getLocation()
                 : (charger != null ? charger.getLocation() : null);
+        String serviceType = (spot != null) ? "PARKING"
+                : (charger != null ? "CHARGING" : null);
 
         return SessionResponse.builder()
                 .id(session.getId())
                 .userId(session.getUser().getId())
                 .userFullName(session.getUser().getFullName())
-                .serviceType(session.getServiceType())
+                .serviceType(serviceType)
                 .locationId(location != null ? location.getId() : null)
                 .locationName(location != null ? location.getName() : null)
                 .parkingSpotId(spot != null ? spot.getId() : null)
@@ -31,7 +33,7 @@ public class SessionMapper {
                 .chargerCode(charger != null ? charger.getChargerCode() : null)
                 .status(session.getStatus())
                 .reservedAt(session.getReservedAt())
-                .expiresAt(session.getExpiresAt())
+                .expiresAt(session.getReservedAt() != null ? session.getReservedAt().plusMinutes(15) : null)
                 .startTime(session.getStartTime())
                 .endTime(session.getEndTime())
                 .depositAmount(session.getDepositAmount())
