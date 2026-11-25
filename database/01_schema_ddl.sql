@@ -100,12 +100,10 @@ CREATE TABLE TARIFFS (
 CREATE TABLE SESSIONS (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    service_type VARCHAR(20) NOT NULL,
     ev_charger_id BIGINT NULL DEFAULT NULL,
     parking_spot_id BIGINT NULL DEFAULT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'BOOKED',
     reserved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME GENERATED ALWAYS AS (reserved_at + INTERVAL 15 MINUTE) STORED NOT NULL,
     start_time DATETIME NULL DEFAULT NULL,
     end_time DATETIME NULL DEFAULT NULL,
     deposit_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
@@ -120,16 +118,15 @@ CREATE TABLE SESSIONS (
     CONSTRAINT fk_session_charger FOREIGN KEY (ev_charger_id)
         REFERENCES EV_CHARGERS(id) ON DELETE RESTRICT,
 
-    -- RB04 & RB10: Phân loại dịch vụ và trạng thái vòng đời phiên
-    CONSTRAINT chk_session_service CHECK (service_type IN ('PARKING', 'CHARGING')),
+    -- RB04 & RB10: Trạng thái vòng đời phiên
     CONSTRAINT chk_session_status CHECK (
         status IN ('BOOKED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'EXPIRED')
     ),
 
     -- RB08: Tham chiếu vị trí giao dịch (Phiên đỗ xe chỉ lưu ô đỗ, phiên sạc điện chỉ lưu trụ sạc)
     CONSTRAINT chk_session_xor_location CHECK (
-        (service_type = 'PARKING' AND parking_spot_id IS NOT NULL AND ev_charger_id IS NULL) OR
-        (service_type = 'CHARGING' AND ev_charger_id IS NOT NULL AND parking_spot_id IS NULL)
+        (parking_spot_id IS NOT NULL AND ev_charger_id IS NULL) OR
+        (ev_charger_id IS NOT NULL AND parking_spot_id IS NULL)
     ),
 
     -- RB11: Toàn vẹn thời gian thực tế theo trạng thái phiên
@@ -144,9 +141,9 @@ CREATE TABLE SESSIONS (
 
     -- RB12 & RB13: Ghi nhận và kiểm soát lượng điện tiêu thụ (kWh)
     CONSTRAINT chk_session_kwh CHECK (
-        (service_type = 'PARKING' AND kwh_consumed IS NULL) OR
-        (service_type = 'CHARGING' AND status != 'COMPLETED' AND kwh_consumed IS NULL) OR
-        (service_type = 'CHARGING' AND status = 'COMPLETED' AND kwh_consumed IS NOT NULL AND kwh_consumed > 0.00)
+        (parking_spot_id IS NOT NULL AND kwh_consumed IS NULL) OR
+        (ev_charger_id IS NOT NULL AND status != 'COMPLETED' AND kwh_consumed IS NULL) OR
+        (ev_charger_id IS NOT NULL AND status = 'COMPLETED' AND kwh_consumed IS NOT NULL AND kwh_consumed > 0.00)
     ),
 
     -- RB12 & RB14: Đối soát tổng hóa đơn thực thu theo trạng thái đóng/mở phiên
@@ -188,7 +185,7 @@ CREATE TABLE ADMIN_AUDIT_LOGS (
 ) ENGINE=InnoDB;
 
 -- Hỗ trợ quét tự động các phiên quá hạn 15 phút (Event) và kiểm tra phiên đang hoạt động (RB15)
-CREATE INDEX idx_sessions_status_expires ON SESSIONS (status, expires_at);
+CREATE INDEX idx_sessions_status_reserved ON SESSIONS (status, reserved_at);
 
 -- Hỗ trợ tra cứu và sắp xếp lịch sử thao tác cấu hình của Ban quản lý theo thời gian (RB16)
 CREATE INDEX idx_audit_target_created ON ADMIN_AUDIT_LOGS (target_table, action_type, created_at);

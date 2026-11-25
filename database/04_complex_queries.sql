@@ -107,7 +107,7 @@ FROM (
     SELECT
         DATE(COALESCE(s.end_time, s.reserved_at)) AS `Ngày`,
         l.name AS `Khu vực`,
-        s.service_type AS `Dịch vụ`,
+        IF(s.parking_spot_id IS NOT NULL, 'PARKING', 'CHARGING') AS `Dịch vụ`,
         COUNT(s.id) AS `Số phiên`,
         SUM(s.total_amount) AS `Doanh thu`,
         0 AS sort_order  -- Dùng để đẩy dòng tổng xuống dưới
@@ -117,8 +117,8 @@ FROM (
     JOIN LOCATIONS l           ON l.id = COALESCE(ps.location_id, ec.location_id)
     WHERE s.total_amount > 0
       AND DATE(COALESCE(s.end_time, s.reserved_at)) BETWEEN @start_date AND @end_date
-      AND (@service_type IS NULL OR s.service_type = @service_type)
-    GROUP BY DATE(COALESCE(s.end_time, s.reserved_at)), l.id, l.location_code, l.name, s.service_type
+      AND (@service_type IS NULL OR IF(s.parking_spot_id IS NOT NULL, 'PARKING', 'CHARGING') = @service_type)
+    GROUP BY DATE(COALESCE(s.end_time, s.reserved_at)), l.id, l.location_code, l.name, IF(s.parking_spot_id IS NOT NULL, 'PARKING', 'CHARGING')
 
     UNION ALL
 
@@ -136,7 +136,7 @@ FROM (
     JOIN LOCATIONS l           ON l.id = COALESCE(ps.location_id, ec.location_id)
     WHERE s.total_amount > 0
       AND DATE(COALESCE(s.end_time, s.reserved_at)) BETWEEN @start_date AND @end_date
-      AND (@service_type IS NULL OR s.service_type = @service_type)
+      AND (@service_type IS NULL OR IF(s.parking_spot_id IS NOT NULL, 'PARKING', 'CHARGING') = @service_type)
 ) AS result
 ORDER BY sort_order ASC, `Ngày` DESC, `Khu vực` ASC, `Dịch vụ` ASC;
 

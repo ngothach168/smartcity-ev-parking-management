@@ -27,7 +27,7 @@ BEGIN
     DECLARE v_resource_status VARCHAR(20);
 
     IF NEW.status IN ('BOOKED', 'IN_PROGRESS') THEN
-        IF NEW.service_type = 'PARKING' THEN
+        IF NEW.parking_spot_id IS NOT NULL THEN
             -- Dùng FOR UPDATE NOWAIT để khóa dòng, chống Race Condition khi có 2 luồng cùng đặt 1 ô đỗ
             SELECT status INTO v_resource_status
             FROM PARKING_SPOTS WHERE id = NEW.parking_spot_id FOR UPDATE NOWAIT;
@@ -35,7 +35,7 @@ BEGIN
             IF v_resource_status != 'AVAILABLE' THEN
                 SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB09: O do xe nay da co nguoi dat hoac dang bao tri.';
             END IF;
-        ELSEIF NEW.service_type = 'CHARGING' THEN
+        ELSEIF NEW.ev_charger_id IS NOT NULL THEN
             SELECT status INTO v_resource_status
             FROM EV_CHARGERS WHERE id = NEW.ev_charger_id FOR UPDATE NOWAIT;
 
@@ -58,7 +58,6 @@ BEGIN
 
     -- RB09 & RB10: Cấm UPDATE tráo vị trí thiết bị/dịch vụ giữa chừng làm lọt lưới chống trùng và kẹt trạng thái IN_USE
     IF NOT (OLD.user_id <=> NEW.user_id
-            AND OLD.service_type <=> NEW.service_type
             AND OLD.parking_spot_id <=> NEW.parking_spot_id
             AND OLD.ev_charger_id <=> NEW.ev_charger_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB09_10: Khong duoc phep trao doi vi tri thiet bi hoac thong tin dinh danh khi phien da khoi tao.';
@@ -82,9 +81,9 @@ AFTER INSERT ON SESSIONS
 FOR EACH ROW
 BEGIN
     IF NEW.status IN ('BOOKED', 'IN_PROGRESS') THEN
-        IF NEW.service_type = 'PARKING' THEN
+        IF NEW.parking_spot_id IS NOT NULL THEN
             UPDATE PARKING_SPOTS SET status = 'IN_USE' WHERE id = NEW.parking_spot_id;
-        ELSEIF NEW.service_type = 'CHARGING' THEN
+        ELSEIF NEW.ev_charger_id IS NOT NULL THEN
             UPDATE EV_CHARGERS SET status = 'IN_USE' WHERE id = NEW.ev_charger_id;
         END IF;
     END IF;
@@ -97,9 +96,9 @@ FOR EACH ROW
 BEGIN
     -- Trả lại trạng thái AVAILABLE khi kết thúc/hủy phiên
     IF NEW.status IN ('COMPLETED', 'CANCELLED', 'EXPIRED') THEN
-        IF NEW.service_type = 'PARKING' THEN
+        IF NEW.parking_spot_id IS NOT NULL THEN
             UPDATE PARKING_SPOTS SET status = 'AVAILABLE' WHERE id = NEW.parking_spot_id;
-        ELSEIF NEW.service_type = 'CHARGING' THEN
+        ELSEIF NEW.ev_charger_id IS NOT NULL THEN
             UPDATE EV_CHARGERS SET status = 'AVAILABLE' WHERE id = NEW.ev_charger_id;
         END IF;
     END IF;
@@ -111,7 +110,7 @@ BEFORE DELETE ON SESSIONS
 FOR EACH ROW
 BEGIN
     SIGNAL SQLSTATE '45000' 
-    SET MESSAGE_TEXT = 'Khong duoc phep xoa du lieu tren bang SESSIONS';
+    SET MESSAGE_TEXT = 'ERR_RB17: Khong duoc phep xoa du lieu tren bang SESSIONS.';
 END $$
 
 -- 6. Trigger BEFORE INSERT trên TARIFFS (RB06: Chống chồng lấn khung giờ cùng loại dịch vụ)
@@ -121,15 +120,18 @@ FOR EACH ROW
 BEGIN
     DECLARE v_overlap_count INT DEFAULT 0;
 
-    SELECT COUNT(*) INTO v_overlap_count
-    FROM TARIFFS
-    WHERE service_type = NEW.service_type
-      AND is_active = 1
-      AND NEW.start_time < end_time
-      AND NEW.end_time > start_time;
+    -- Chỉ kiểm tra chồng lấn khi dòng mới được chèn ở trạng thái đang áp dụng
+    IF NEW.is_active = 1 THEN
+        SELECT COUNT(*) INTO v_overlap_count
+        FROM TARIFFS
+        WHERE service_type = NEW.service_type
+          AND is_active = 1
+          AND NEW.start_time < end_time
+          AND NEW.end_time > start_time;
 
-    IF v_overlap_count > 0 THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB06: Khung gio bieu gia bi chong lan voi khung gio da ton tai.';
+        IF v_overlap_count > 0 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB06: Khung gio bieu gia bi chong lan voi khung gio da ton tai.';
+        END IF;
     END IF;
 END $$
 
@@ -150,10 +152,12 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ERR_RB15: Khong the cap nhat bang gia khi dang co phien giao dich hoat dong.';
     END IF;
 
-    -- RB06: Chỉ kiểm tra chồng lấn nếu có thay đổi loại dịch vụ hoặc khung giờ
-    IF NOT (OLD.service_type <=> NEW.service_type
-            AND OLD.start_time <=> NEW.start_time
-            AND OLD.end_time <=> NEW.end_time) THEN
+    -- RB06: Kiểm tra chồng lấn nếu có thay đổi giờ, HOẶC nếu đang bật lại một bộ giá cũ
+    IF NEW.is_active = 1
+       AND NOT (OLD.is_active = 1
+                AND OLD.service_type <=> NEW.service_type
+                AND OLD.start_time <=> NEW.start_time
+                AND OLD.end_time <=> NEW.end_time) THEN
         SELECT COUNT(*) INTO v_overlap_count
         FROM TARIFFS
         WHERE service_type = NEW.service_type
@@ -218,7 +222,7 @@ BEGIN
     SET status = 'EXPIRED',
         total_amount = deposit_amount
     WHERE status = 'BOOKED'
-      AND expires_at <= NOW();
+      AND reserved_at <= NOW() - INTERVAL 15 MINUTE;
 END $$
 
 DELIMITER ;
@@ -229,7 +233,7 @@ SELECT
     l.id AS location_id,
     l.location_code,
     l.name AS location_name,
-    s.service_type,
+    'PARKING' AS service_type,
     DATE(COALESCE(s.end_time, s.reserved_at)) AS revenue_date,
     COUNT(s.id) AS total_sessions,
     SUM(s.total_amount) AS total_revenue
@@ -238,7 +242,7 @@ JOIN PARKING_SPOTS ps ON s.parking_spot_id = ps.id
 JOIN LOCATIONS l ON ps.location_id = l.id
 WHERE s.status IN ('COMPLETED', 'CANCELLED', 'EXPIRED')
   AND s.total_amount > 0
-GROUP BY l.id, l.location_code, l.name, s.service_type, DATE(COALESCE(s.end_time, s.reserved_at))
+GROUP BY l.id, l.location_code, l.name, DATE(COALESCE(s.end_time, s.reserved_at))
 
 UNION ALL
 
@@ -246,7 +250,7 @@ SELECT
     l.id AS location_id,
     l.location_code,
     l.name AS location_name,
-    s.service_type,
+    'CHARGING' AS service_type,
     DATE(COALESCE(s.end_time, s.reserved_at)) AS revenue_date,
     COUNT(s.id) AS total_sessions,
     SUM(s.total_amount) AS total_revenue
@@ -255,4 +259,4 @@ JOIN EV_CHARGERS ec ON s.ev_charger_id = ec.id
 JOIN LOCATIONS l ON ec.location_id = l.id
 WHERE s.status IN ('COMPLETED', 'CANCELLED', 'EXPIRED')
   AND s.total_amount > 0
-GROUP BY l.id, l.location_code, l.name, s.service_type, DATE(COALESCE(s.end_time, s.reserved_at));
+GROUP BY l.id, l.location_code, l.name, DATE(COALESCE(s.end_time, s.reserved_at));
