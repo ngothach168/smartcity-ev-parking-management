@@ -1,23 +1,71 @@
-🚗⚡ EV Charging & Parking Management System
+# 🚗 Smart City EV Charging & Parking Management
 
-Đồ án môn Cơ sở dữ liệu — Hệ thống quản lý đặt chỗ tập trung cho trạm sạc xe điện và bãi đỗ xe đô thị, tích hợp định giá linh hoạt theo khung giờ cao điểm.
+Hệ thống quản lý bãi đỗ xe và trạm sạc xe điện thông minh.
 
-📋 Tổng quan
-Hệ thống backend quản lý vòng đời đặt chỗ (booking) cho hai loại tài nguyên đô thị:
-- Trạm sạc xe điện — vận hành tự phục vụ 100%, không có nhân viên giám sát.
-- Bãi đỗ xe — vận hành tự động qua hệ thống quét mã QR, không có bảo vệ gác cổng.
+## 📌 Giới thiệu công nghệ
 
-Trọng tâm đồ án là thiết kế Cơ sở dữ liệu quan hệ, xử lý dữ liệu thời gian (temporal data), tính phí theo thời lượng sử dụng thực tế, và biểu giá linh động theo khung giờ.
+- **Backend:** Java Spring Boot (JDK 21)
+- **Database:** MySQL Server 8.0
+- **IDE khuyên dùng:** IntelliJ IDEA
+- **Quản lý mã nguồn:** Git
 
-🎯 Mục tiêu kỹ thuật
-Quản lý vòng đời đặt chỗ thống nhất cho cả 2 loại dịch vụ (Booking → Check-in → Check-out → Hóa đơn).
-Tính phí tự động theo thuật toán cắt lớp thời gian (Time-Slicing) và phân bổ điện năng theo tỷ lệ (Proportional kWh Allocation).
-Đảm bảo toàn vẹn dữ liệu trong môi trường nhiều người dùng truy cập đồng thời (Concurrency Control).
-Tìm kiếm trạm sạc/bãi đỗ gần nhất theo tọa độ (Haversine + Bounding Box pre-filter).
+---
 
-🏗️ Kiến trúc & Công nghệ
-Thành phần	Công nghệ
-Backend	Java Spring Boot
-Cơ sở dữ liệu	MySQL 8.0+
-ORM	Spring Data JPA
-API Testing	Postman (giả lập phần cứng/IoT)
+## 🛠 Yêu cầu cài đặt trước
+
+Hãy đảm bảo máy tính của bạn đã cài đặt các phần mềm sau:
+
+- [JDK 21](https://www.oracle.com/java/technologies/downloads/#java21)
+- [MySQL Server 8.0 & MySQL Workbench](https://dev.mysql.com/downloads/installer/)
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/download/)
+- [Git](https://git-scm.com/downloads)
+
+---
+
+## 🚀 Hướng dẫn cài đặt & Chạy dự án
+
+### Bước 1: Tải mã nguồn về máy
+
+Mở Terminal/CMD và chạy lệnh sau:
+
+```bash
+git clone https://github.com/ngothach168/smartcity-ev-parking-management.git
+```
+
+### Bước 2: Khởi tạo Cơ sở dữ liệu
+
+Mở **MySQL Workbench**, tạo một vùng làm việc mới và chạy lần lượt **5 file SQL** trong thư mục `database/` theo đúng thứ tự sau:
+
+1. `01_schema_ddl.sql` (Khởi tạo cấu trúc bảng)
+2. `02_mock_data_dml.sql` (Chèn dữ liệu mẫu)
+3. `03_triggers_views.sql` (Tạo Triggers, View và Event)
+4. `04_complex_queries.sql` (Các truy vấn phức tạp - Tùy chọn)
+5. `05_rbac.sql` (Phân quyền tài khoản Database `ev_app` cho ứng dụng - **Bắt buộc chạy**)
+
+### Bước 3: Cấu hình kết nối Database
+
+1. Truy cập vào thư mục: `backend/src/main/resources/`
+2. Tìm file `application.properties.example`.
+3. Sao chép file đó và đổi tên bản sao thành `application.properties`.
+4. Mở file `application.properties` vừa tạo.
+
+   *(Nếu bạn đã chạy file `05_rbac.sql` ở Bước 2, tài khoản và mật khẩu đã được điền sẵn là `ev_app` / `AppPass123$`. Nếu dùng tài khoản khác, hãy sửa lại `username` và `password` cho đúng với máy của bạn).*
+
+### Bước 4: Khởi chạy ứng dụng
+
+1. Mở thư mục `backend` bằng **IntelliJ IDEA**.
+2. Tìm file `DemoApplication.java` tại đường dẫn `src/main/java/com/example/demo/`.
+3. Bấm nút **Run** (biểu tượng tam giác màu xanh) để khởi chạy.
+
+---
+
+## 🌐 Truy cập ứng dụng
+
+Sau khi ứng dụng khởi chạy thành công, mở trình duyệt và truy cập:
+
+👉 [**http://localhost:8080**](http://localhost:8080)
+
+### Tài khoản Admin mặc định (dùng để test)
+
+- **Số điện thoại:** `0900000001`
+- **Mật khẩu:** `123456`
