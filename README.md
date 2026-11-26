@@ -40,7 +40,7 @@ Mở **MySQL Workbench**, tạo một vùng làm việc mới và chạy lần l
 2. `02_mock_data_dml.sql` (Chèn dữ liệu mẫu)
 3. `03_triggers_views.sql` (Tạo Triggers, View và Event)
 4. `04_complex_queries.sql` (Các truy vấn phức tạp - Tùy chọn)
-5. `05_rbac.sql` (Phân quyền tài khoản Database `ev_app` cho ứng dụng - **Bắt buộc chạy**)
+5. `05_rbac.sql` (Phân quyền tài khoản Database `ev_app` cho ứng dụng )
 
 ### Bước 3: Cấu hình kết nối Database
 
